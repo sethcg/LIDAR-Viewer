@@ -1,0 +1,6 @@
+{
+    "cmake.configureOnEdit": false,
+    "cmake.configureOnOpen": false,
+    "cmake.cmakePath": "C:\\Program Files\\CMake\\bin\\cmake.exe",
+    "C_Cpp.autoAddFileAssociations": false
+}

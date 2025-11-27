@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch (Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}\\build\\default\\Debug\\main.exe",
+            "cwd": "${workspaceFolder}\\build\\default\\Debug",
+            "args": [],
+            "stopAtEntry": false,
+            "environment": [],
+            "console": "integratedTerminal",
+            "preLaunchTask": "Build"
+        },
+        {
+            "name": "Debug (gdb)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}\\build\\default\\Debug\\main.exe",
+            "cwd": "${workspaceFolder}\\build\\default\\Debug",
+            "args": [],
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb.exe",
+            "preLaunchTask": "Build"
+        }
+    ]
+}
