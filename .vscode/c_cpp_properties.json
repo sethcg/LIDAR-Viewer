@@ -4,6 +4,7 @@
             "name": "Windows",
             "includePath": [
                 "${workspaceFolder}\\core\\include\\**",
+                "${workspaceFolder}\\build\\default\\_deps\\**",
                 "${workspaceFolder}\\build\\default\\vcpkg_installed\\x64-windows\\include\\**"
             ],
             "defines": ["_DEBUG", "UNICODE", "_UNICODE"],
