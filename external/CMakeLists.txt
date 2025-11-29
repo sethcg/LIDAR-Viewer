@@ -29,3 +29,13 @@ TARGET_LINK_LIBRARIES(imgui PUBLIC
     SDL3::SDL3 
     OpenGL::GL
 )
+
+# FETCH TINY_FILE_DIALOGS
+FetchContent_Declare(tinyfiledialog
+    GIT_REPOSITORY https://github.com/native-toolkit/libtinyfiledialogs.git
+    GIT_TAG 2.9.3
+)
+FetchContent_MakeAvailable(tinyfiledialog)
+
+ADD_LIBRARY(tinyfiledialog STATIC ${tinyfiledialog_SOURCE_DIR}/tinyfiledialogs.c)
+TARGET_INCLUDE_DIRECTORIES(tinyfiledialog PUBLIC ${tinyfiledialog_SOURCE_DIR})

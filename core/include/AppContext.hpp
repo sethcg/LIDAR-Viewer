@@ -26,6 +26,7 @@ struct AppContext {
     GLuint vao;                     // VERTEX ARRAY OBJECT
     GLuint vbo;                     // VERTEX BUFFER OBJECT
 
+    const char* filepath;
     std::vector<float> triColor;    // CURRENT TRIANGLE COLOR
 
     AppContext() {
@@ -37,6 +38,7 @@ struct AppContext {
         program = 0;
         vao = 0;
         vbo = 0;
+        filepath = "";
         triColor = { 1.0f, 1.0f, 1.0f };
     }
 };

@@ -29,6 +29,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include <AppContext.hpp>
+#include <UserInterface.hpp>
 
 std::string LoadTextFile(const char* path) {
     std::ifstream file(path);
@@ -139,7 +140,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    ImGui::StyleColorsDark();
+    // SETUP IMGUI WINDOW/COLOR THEME
+    UserInterface::SetCustomTheme();
 
     // INITIALIZE BACKENDS
     ImGui_ImplSDL3_InitForOpenGL(appContext->window, appContext->opengl_context);
@@ -170,11 +172,16 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+    
+    ImGui::Begin("Control Panel");
 
-    ImGui::Begin("Triangle Color");
+    UserInterface::FileSelectButton(appContext, "Select File", ImVec2(0, 28));
+    ImGui::SameLine(0.0f, 10.0f);
+    UserInterface::FileSelectLabel(appContext->filepath, ImVec2(0, 28));
+
     ImGui::ColorEdit3("Color", appContext->triColor.data());
-    ImGui::End();
 
+    ImGui::End();
     ImGui::Render();
 
     glViewport(0, 0, appContext->width, appContext->height);
