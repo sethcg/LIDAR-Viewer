@@ -31,6 +31,8 @@
 #include <AppContext.hpp>
 #include <UserInterface.hpp>
 
+using namespace Application;
+
 std::string LoadTextFile(const char* path) {
     std::ifstream file(path);
     if (!file.is_open()) {
@@ -76,18 +78,17 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     }
     *appstate = appContext;
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    appContext->window = SDL_CreateWindow("Example", WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS);
-    appContext->opengl_context = SDL_GL_CreateContext(appContext->window);
-    SDL_GL_SetSwapInterval(1);
-
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "%s", "Failed to load GLAD\n");
+    // SETUP WINDOW
+    if(CreateWindow(appContext, "LIDAR Viewer")) {
+        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
+    // SETUP OPENGL (WITH GLAD)
+    if(CreateGLContext(appContext)) {
+        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    };
 
     // OPENGL TRIANGLE SETUP
     std::string vertSrc = LoadTextFile("../assets/shaders/triangle.vert");
@@ -185,7 +186,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     ImGui::Render();
 
     glViewport(0, 0, appContext->width, appContext->height);
-    glClearColor(0.12f, 0.12f, 0.15f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);   // DARK BACKGROUND
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(appContext->program);

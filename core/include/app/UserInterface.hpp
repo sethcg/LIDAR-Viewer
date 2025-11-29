@@ -8,6 +8,8 @@
 
 namespace UserInterface {
 
+    using namespace Application;
+
     void SetCustomTheme();
 
     void FileSelectButton(AppContext* appContext, const char* text, ImVec2 size);
