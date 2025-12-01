@@ -17,52 +17,21 @@
 
 #define SDL_MAIN_USE_CALLBACKS 1 // USE CALLBACKS INSTEAD OF THE "main()" FUNCTION
 
-#include <fstream>
-#include <sstream>
-#include <string>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
 
 #include <AppContext.hpp>
 #include <UserInterface.hpp>
+#include <CubeRenderer.hpp>
 
 using namespace Application;
-
-std::string LoadTextFile(const char* path) {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Failed to load shader file: %s\n", path);
-        return "";
-    }
-    std::stringstream ss;
-    ss << file.rdbuf();
-    return ss.str();
-}
-
-void CheckShader(GLuint shader, const char* name) {
-    GLint ok;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
-    if (!ok) {
-        char log[1024];
-        glGetShaderInfoLog(shader, 1024, nullptr, log);
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Shader compile error (%s): %s\n", name, log);
-    }
-}
-
-void CheckProgram(GLuint program) {
-    GLint ok;
-    glGetProgramiv(program, GL_LINK_STATUS, &ok);
-    if (!ok) {
-        char log[1024];
-        glGetProgramInfoLog(program, 1024, nullptr, log);
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Program link error: %s\n", log);
-    }
-}
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
@@ -90,49 +59,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         return SDL_APP_FAILURE;
     };
 
-    // OPENGL TRIANGLE SETUP
-    std::string vertSrc = LoadTextFile("../assets/shaders/triangle.vert");
-    std::string fragSrc = LoadTextFile("../assets/shaders/triangle.frag");
+    // INITIALIZE RENDERER
+    glEnable(GL_DEPTH_TEST);
 
-    const char* vsrc = vertSrc.c_str();
-    const char* fsrc = fragSrc.c_str();
+    CubeRenderer::Init();
 
-    GLuint vert = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vert, 1, &vsrc, nullptr);
-    glCompileShader(vert);
-    CheckShader(vert, "vertex");
-
-    GLuint frag = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag, 1, &fsrc, nullptr);
-    glCompileShader(frag);
-    CheckShader(frag, "fragment");
-
-    appContext->program = glCreateProgram();
-    glAttachShader(appContext->program, vert);
-    glAttachShader(appContext->program, frag);
-    glLinkProgram(appContext->program);
-    CheckProgram(appContext->program);
-
-    glDeleteShader(vert);
-    glDeleteShader(frag);
-
-    // TRIANGLE GEOMETRY
-    float triangle[] = {
-        -0.5f, -0.5f, 0.f,
-         0.5f, -0.5f, 0.f,
-         0.0f,  0.5f, 0.f
-    };
-
-    glGenVertexArrays(1, &appContext->vao);
-    glGenBuffers(1, &appContext->vbo);
-
-    glBindVertexArray(appContext->vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, appContext->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
-    glEnableVertexAttribArray(0);
+    // ADD SOME TESTING CUBES
+    CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(-1.5f, 0, 0)));
+    CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(1.5f, 0, 0)));
+    CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(0, 1.5f, 0)));
 
     // SETUP IMGUI
     IMGUI_CHECKVERSION();
@@ -176,25 +111,20 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     
     ImGui::Begin("Control Panel");
 
+    // FILE SELECTION
     UserInterface::FileSelectButton(appContext, "Select File", ImVec2(0, 28));
     ImGui::SameLine(0.0f, 10.0f);
     UserInterface::FileSelectLabel(appContext->filepath, ImVec2(0, 28));
 
-    ImGui::ColorEdit3("Color", appContext->triColor.data());
+    // CUBE OPTIONS
+    ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
+    ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
+    ImGui::SliderFloat("Rotation Speed", &appContext->rotationSpeed, 0.0f, 5.0f);
 
     ImGui::End();
     ImGui::Render();
-
-    glViewport(0, 0, appContext->width, appContext->height);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);   // DARK BACKGROUND
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glUseProgram(appContext->program);
-    GLint loc = glGetUniformLocation(appContext->program, "uColor");
-    glUniform3fv(loc, 1, appContext->triColor.data());
-
-    glBindVertexArray(appContext->vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    
+    CubeRenderer::Render(appContext);
 
     // RENDER IMGUI
     appContext->imgui_data = ImGui::GetDrawData();
@@ -210,10 +140,6 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result) {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
-
-    glDeleteProgram(appContext->program);
-    glDeleteBuffers(1, &appContext->vbo);
-    glDeleteVertexArrays(1, &appContext->vao);
 
     SDL_GL_DestroyContext(appContext->opengl_context);
     SDL_DestroyWindow(appContext->window);

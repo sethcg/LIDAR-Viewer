@@ -3,6 +3,7 @@
   "dependencies": [
     "pdal",
     "sdl3",
-    "glad"
+    "glad",
+    "glm"
   ]
 }

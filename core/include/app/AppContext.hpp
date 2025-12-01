@@ -5,6 +5,9 @@
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 
 #define WINDOW_WIDTH 1280
@@ -24,24 +27,26 @@ namespace Application {
         SDL_Window* window;             
         ImDrawData* imgui_data;
         SDL_GLContext opengl_context;   // OPENGL CONTEXT
-        GLuint program;                 // SHADER PROGRAM
-        GLuint vao;                     // VERTEX ARRAY OBJECT
-        GLuint vbo;                     // VERTEX BUFFER OBJECT
+
+        glm::vec3 globalColor;
+        float globalScale;
+        float rotationSpeed;
 
         const char* filepath;
-        std::vector<float> triColor;    // CURRENT TRIANGLE COLOR
 
         AppContext() {
             width = WINDOW_WIDTH;
             height = WINDOW_HEIGHT;
             window = nullptr;
             imgui_data = nullptr;
+            
             opengl_context = nullptr;
-            program = 0;
-            vao = 0;
-            vbo = 0;
+
+            globalColor = glm::vec3(1.0f);
+            globalScale = 1.0f;
+            rotationSpeed = 1.0f;
+
             filepath = "";
-            triColor = { 1.0f, 1.0f, 1.0f };
         }
     };
 
