@@ -2,10 +2,22 @@
 #define CUSTOM_READER_H
 
 #include <iostream>
+#include <vector>
 
 namespace CustomReader {
 
-    int ReadWritePointData(std::string intput, std::string output);
+    struct Point {
+        double x;
+        double y;
+        double z;
+        uint16_t intensity;
+    };
+
+    void GetPointData(
+        const std::string& filename, 
+        std::vector<Point>* points, 
+        uint32_t decimationStep = 1
+    );
 
 }
 

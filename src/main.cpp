@@ -1,20 +1,3 @@
-// #include <pdal/pdal.hpp>
-// #include <pdal/PipelineManager.hpp>
-// #include <pdal/PointView.hpp>
-// #include <iostream>
-// #include <fstream>
-// #include <sstream>
-
-// #include <CustomReader.hpp>
-
-// int main(int argc, char* argv[]) {
-
-//     std::string input = "../assets/autzen.laz";
-//     std::string output = "../assets/output.txt";
-
-//     return CustomReader::ReadWritePointData(input, output);
-// }
-
 #define SDL_MAIN_USE_CALLBACKS 1 // USE CALLBACKS INSTEAD OF THE "main()" FUNCTION
 
 #include <SDL3/SDL.h>
@@ -30,6 +13,9 @@
 #include <AppContext.hpp>
 #include <UserInterface.hpp>
 #include <CubeRenderer.hpp>
+#include <CustomReader.hpp>
+
+#include <chrono>
 
 using namespace Application;
 
@@ -38,6 +24,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_DEBUG);
 
     // SETUP APP STATE
     AppContext* appContext = new AppContext();
@@ -62,13 +50,28 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     // INITIALIZE RENDERER
     glEnable(GL_DEPTH_TEST);
 
+    auto start = std::chrono::high_resolution_clock::now();
+    std::vector<CustomReader::Point> points;
+    CustomReader::GetPointData("../assets/lake.laz", &points, 1);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "NUMBER OF POINTS FOR \"lake.laz\": %llu", points.size());
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "DURATION FOR \"lake.laz\": %ld\n\n", duration.count());
+
     CubeRenderer::Init();
+    for (size_t i = 0; i < points.size(); ++i) {
+        const auto& point = points[i];
+        CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(point.x, point.y, point.z)));
+        // SDL_LogDebug(
+        //     SDL_LOG_CATEGORY_APPLICATION,
+        //     "INDEX: %lu, X: %.10f, Y: %.10f, Z: %.10f",
+        //     static_cast<unsigned long>(i), point.x, point.y, point.z
+        // );
+    }
 
-    // ADD SOME TESTING CUBES
-    CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(-1.5f, 0, 0)));
-    CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(1.5f, 0, 0)));
-    CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(0, 1.5f, 0)));
-
+    // INITIALIZE CAMERA ONCE WHEN ALL CUBES ADDED
+    CubeRenderer::InitCamera(appContext);
+    
     // SETUP IMGUI
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -109,6 +112,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
     
+    ImVec2 minSize(MINIMUM_WINDOW_WIDTH / 2, MINIMUM_WINDOW_HEIGHT / 2);
+    ImVec2 maxSize(FLT_MAX, FLT_MAX);
+    ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
     ImGui::Begin("Control Panel");
 
     // FILE SELECTION
@@ -119,7 +126,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     // CUBE OPTIONS
     ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
     ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
-    ImGui::SliderFloat("Rotation Speed", &appContext->rotationSpeed, 0.0f, 5.0f);
 
     ImGui::End();
     ImGui::Render();

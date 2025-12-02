@@ -30,7 +30,6 @@ namespace Application {
 
         glm::vec3 globalColor;
         float globalScale;
-        float rotationSpeed;
 
         const char* filepath;
 
@@ -42,9 +41,8 @@ namespace Application {
             
             opengl_context = nullptr;
 
-            globalColor = glm::vec3(1.0f);
-            globalScale = 1.0f;
-            rotationSpeed = 1.0f;
+            globalColor = glm::vec3(1.0f, 0.0f, 0.0f);
+            globalScale = 0.5f;
 
             filepath = "";
         }

@@ -17,60 +17,11 @@ namespace CubeRenderer {
     GLuint vao = 0;                 // VERTEX ARRAY OBJECT
     GLuint vbo = 0;                 // VERTEX BUFFER OBJECT
     
-    float angle = 0.0f;
-
     std::vector<Cube> cubes;
 
-    float vertices[] = {
-        // BACK FACE (RED)
-        -0.5f,-0.5f,-0.5f,
-        0.5f,-0.5f,-0.5f,
-        0.5f, 0.5f,-0.5f,
-        0.5f, 0.5f,-0.5f,
-        -0.5f, 0.5f,-0.5f,
-        -0.5f,-0.5f,-0.5f,
-
-        // FRONT FACE (GREEN)
-        -0.5f,-0.5f, 0.5f,
-        0.5f,-0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-        -0.5f, 0.5f, 0.5f,
-        -0.5f,-0.5f, 0.5f,
-
-        // LEFT FACE (BLUE)
-        -0.5f, 0.5f, 0.5f,
-        -0.5f, 0.5f,-0.5f,
-        -0.5f,-0.5f,-0.5f,
-        -0.5f,-0.5f,-0.5f,
-        -0.5f,-0.5f, 0.5f,
-        -0.5f, 0.5f, 0.5f,
-
-        // RIGHT FACE (YELLOW)
-        0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f,-0.5f,
-        0.5f,-0.5f,-0.5f,
-        0.5f,-0.5f,-0.5f,
-        0.5f,-0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-
-        // BOTTOM FACE (MAGENTA)
-        -0.5f,-0.5f,-0.5f,
-        0.5f,-0.5f,-0.5f,
-        0.5f,-0.5f, 0.5f,
-        0.5f,-0.5f, 0.5f,
-        -0.5f,-0.5f, 0.5f,
-        -0.5f,-0.5f,-0.5f,
-
-        // TOP FACE (CYAN)
-        -0.5f, 0.5f,-0.5f,
-        0.5f, 0.5f,-0.5f,
-        0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-        -0.5f, 0.5f, 0.5f,
-        -0.5f, 0.5f,-0.5f,
-    };
-
+    glm::mat4 cachedView;
+    glm::mat4 cachedProjection;
+    bool matricesInitialized = false;
     
     std::string LoadTextFile(const char* path) {
         std::ifstream file(path);
@@ -141,29 +92,52 @@ namespace CubeRenderer {
         glEnableVertexAttribArray(1);
     }
 
-    void Render(Application::AppContext* appContext) {
-        angle += 0.01f * appContext->rotationSpeed;
+    void InitCamera(Application::AppContext* appContext) {
+        if (matricesInitialized) return;
 
+        // COMPUTE BOUNDING BOX OF ALL CUBES
+        glm::vec3 min(FLT_MAX), max(-FLT_MAX);
+        for (const Cube& cube : cubes) {
+            glm::vec3 pos = cube.position;
+            float s = cube.scale * appContext->globalScale;
+            min = glm::min(min, pos - glm::vec3(s));
+            max = glm::max(max, pos + glm::vec3(s));
+        }
+
+        glm::vec3 center = 0.5f * (min + max);
+        float extent = glm::max(max.x - min.x, max.y - min.y) * 0.5f;
+
+        float margin = 10.0f; // extra space
+        float viewSize = extent + margin;
+
+        // STATIC TOP-DOWN CAMERA
+        cachedView = glm::lookAt(
+            glm::vec3(center.x, center.y, 200.0f),  // CAMERA HIGH ABOVE
+            glm::vec3(center.x, center.y, 0.0f),    // LOOK AT THE CENTER OF THE CUBES
+            glm::vec3(0.0f, 1.0f, 0.0f)             // UP VECTOR
+        );
+
+        cachedProjection = glm::ortho(-viewSize, viewSize, -viewSize, viewSize, 0.1f, 500.0f);
+        matricesInitialized = true;
+    }
+
+    void Render(Application::AppContext* appContext) {
         glViewport(0, 0, appContext->width, appContext->height);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(program);
 
-        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -5));
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) appContext->width / appContext->height, 0.1f, 100.0f);
-
         GLint globalColorLocation = glGetUniformLocation(program, "globalColor");
         glUniform3fv(globalColorLocation, 1, glm::value_ptr(appContext->globalColor));
 
         for(const Cube& cube : cubes) {
             glm::mat4 model = glm::translate(glm::mat4(1.0f), cube.position);
-            model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
             model = glm::scale(model, glm::vec3(cube.scale * appContext->globalScale));
 
             glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+            glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, glm::value_ptr(cachedView));
+            glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(cachedProjection));
 
             // SET UNIFORM COLOR
             GLint colorLocation = glGetUniformLocation(program, "cubeColor");

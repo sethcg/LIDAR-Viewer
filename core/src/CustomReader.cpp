@@ -1,75 +1,83 @@
-#include <pdal/pdal.hpp>
-#include <pdal/PipelineManager.hpp>
-#include <pdal/PointView.hpp>
-#include <pdal/StageFactory.hpp>
-
 #include <iostream>
+#include <vector>
+#include <string>
+
+#include <pdal/pdal.hpp>
+#include <pdal/StageFactory.hpp>
+#include <pdal/io/LasReader.hpp>
+#include <pdal/filters/DecimationFilter.hpp>
+#include <pdal/PointTable.hpp>
+#include <pdal/PointView.hpp>
 
 #include <CustomReader.hpp>
 
 namespace CustomReader {
 
-    int ReadWritePointData(std::string intput, std::string output)  {
-        try {
+    void GetPointData(
+        const std::string& filename, 
+        std::vector<Point>* points, 
+        uint32_t decimationStep) 
+    {
+        if (!points) return;
 
-            // CREATE PIPELINE MANAGER
-            pdal::PipelineManager manager;
-            pdal::StageFactory factory;
+        pdal::StageFactory factory;
 
-            // CREATE LAS/LAZ READER
-            pdal::Stage* reader = factory.createStage("readers.las");
+        // CREATE LAS/LAZ READER
+        pdal::Stage* reader = factory.createStage("readers.las");
+        pdal::Options readerOptions;
+        readerOptions.add("filename", filename);
+        reader->setOptions(readerOptions);
 
-            // SET OPTIONS FOR READER
-            pdal::Options readerOptions;
-            readerOptions.add("filename", intput);
-            reader->setOptions(readerOptions);
+        pdal::Stage* lastStage = reader;
 
-            manager.addStage(reader);
-
-            // EXECUTE READER PIPELINE
-            manager.execute();
-
-            // GET THE POINT VIEWS
-            pdal::PointViewSet views = manager.views();
-
-            // OPEN OUTPUT TEXT FILE
-            std::ofstream ofs(output);
-            if (!ofs) {
-                std::cerr << "Cannot open output file: " << output << std::endl;
-                return 1;
-            }
-
-            // WRITE CSV HEADER
-            ofs << "X,Y,Z,Intensity,ReturnNumber,NumberOfReturns\n";
-
-            // ITERATE ALL POINTS
-            for (pdal::PointViewPtr view : views)  {
-                // GET FIRST 100 POINTS
-                for (pdal::PointId i = 0; i < 100; ++i) {
-                // for (pdal::PointId i = 0; i < view->size(); ++i) {
-                    double x = view->getFieldAs<double>(pdal::Dimension::Id::X, i);
-                    double y = view->getFieldAs<double>(pdal::Dimension::Id::Y, i);
-                    double z = view->getFieldAs<double>(pdal::Dimension::Id::Z, i);
-                    uint16_t intensity = view->getFieldAs<uint16_t>(pdal::Dimension::Id::Intensity, i);
-                    uint8_t returnNum = view->getFieldAs<uint8_t>(pdal::Dimension::Id::ReturnNumber, i);
-                    uint8_t numReturns = view->getFieldAs<uint8_t>(pdal::Dimension::Id::NumberOfReturns, i);
-
-                    ofs << x << "," << y << "," << z << "," << intensity
-                        << "," << static_cast<int>(returnNum)
-                        << "," << static_cast<int>(numReturns) << "\n";
-                }
-            }
-
-            std::cout << "Finished writing points to " << output << std::endl;
-        } catch (const pdal::pdal_error& e) {
-            std::cerr << "PDAL error: " << e.what() << std::endl;
-            return 1;
-        } catch (const std::exception& e) {
-            std::cerr << "Exception: " << e.what() << std::endl;
-            return 1;
+        // APPLY DECIMATION FILTER (READ EVERY N-TH POINT)
+        if (decimationStep > 1) {
+            pdal::Stage* decimation = factory.createStage("filters.decimation");
+            pdal::Options decimationOptions;
+            decimationOptions.add("step", decimationStep);
+            decimation->setOptions(decimationOptions);
+            decimation->setInput(*lastStage);
+            lastStage = decimation;
         }
 
-        return 0;
-    } 
+        // PREPARE/EXECUTE PIPELINE
+        pdal::PointTable table;
+        lastStage->prepare(table);
+        pdal::PointViewSet viewSet = lastStage->execute(table);
+
+        // CALCULATE TOTAL POINTS/ALLOCATE MEMORY
+        size_t totalPoints = 0;
+        for (auto const& view : viewSet) totalPoints += view->size();
+        points->resize(totalPoints);
+
+        // EXTRACT POINT DATA AND COMPUTE MEAN
+        double sumX = 0, sumY = 0, sumZ = 0;
+        size_t offset = 0;
+        for (auto const& view : viewSet) {
+            for (pdal::PointId idx = 0; idx < view->size(); ++idx, ++offset) {
+                Point& point = (*points)[offset];
+                point.x = view->getFieldAs<double>(pdal::Dimension::Id::X, idx);
+                point.y = view->getFieldAs<double>(pdal::Dimension::Id::Y, idx);
+                point.z = view->getFieldAs<double>(pdal::Dimension::Id::Z, idx);
+                point.intensity = view->getFieldAs<uint16_t>(pdal::Dimension::Id::Intensity, idx);
+
+                sumX += point.x;
+                sumY += point.y;
+                sumZ += point.z;
+            }
+        }
+
+        // COMPUTE MEAN
+        double meanX = sumX / totalPoints;
+        double meanY = sumY / totalPoints;
+        double meanZ = sumZ / totalPoints;
+
+        // CENTER POINTS AROUND 0
+        for (auto& point : *points) {
+            point.x -= meanX;
+            point.y -= meanY;
+            point.z -= meanZ;
+        }
+    }
 
 }
