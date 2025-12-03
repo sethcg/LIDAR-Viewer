@@ -14,8 +14,7 @@
 #include <UserInterface.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
-
-#include <chrono>
+#include <Point.hpp>
 
 using namespace Application;
 
@@ -50,27 +49,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     // INITIALIZE RENDERER
     glEnable(GL_DEPTH_TEST);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    std::vector<CustomReader::Point> points;
-    CustomReader::GetPointData("../assets/lake.laz", &points, 1);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "NUMBER OF POINTS FOR \"lake.laz\": %llu", points.size());
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "DURATION FOR \"lake.laz\": %ld\n\n", duration.count());
-
     CubeRenderer::Init();
-    for (size_t i = 0; i < points.size(); ++i) {
-        const auto& point = points[i];
-        CubeRenderer::Add(CubeRenderer::Cube(glm::vec3(point.x, point.y, point.z)));
-        // SDL_LogDebug(
-        //     SDL_LOG_CATEGORY_APPLICATION,
-        //     "INDEX: %lu, X: %.10f, Y: %.10f, Z: %.10f",
-        //     static_cast<unsigned long>(i), point.x, point.y, point.z
-        // );
-    }
-
-    // INITIALIZE CAMERA ONCE WHEN ALL CUBES ADDED
-    CubeRenderer::InitCamera(appContext);
     
     // SETUP IMGUI
     IMGUI_CHECKVERSION();
@@ -119,9 +98,31 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     ImGui::Begin("Control Panel");
 
     // FILE SELECTION
-    UserInterface::FileSelectButton(appContext, "Select File", ImVec2(0, 28));
+    UserInterface::FileSelectButton(appContext, "Select File", ImVec2(0, 28),
+        [](AppContext* appContext, std::string filepath){
+            appContext->filepath = filepath;
+            
+            // READ LAZ FILE DATA
+            const uint32_t decimationStep = 1;
+            CustomReader::GetPointData(
+                appContext->filepath,
+                &appContext->points,
+                decimationStep
+            );
+            
+            // ADD CUBE FOR EACH POINT
+            CubeRenderer::Clear();
+            for (size_t i = 0; i < appContext->points.size(); ++i) {
+                const Data::Point& point = appContext->points[i];
+                CubeRenderer::Add(CubeRenderer::Cube(
+                    glm::vec3(point.x, point.y, point.z), 
+                    Data::ColorMap(point.normalized)
+                ));
+            }
+            CubeRenderer::InitCamera(appContext);
+        });
     ImGui::SameLine(0.0f, 10.0f);
-    UserInterface::FileSelectLabel(appContext->filepath, ImVec2(0, 28));
+    UserInterface::FileSelectLabel(appContext->filepath.c_str(), ImVec2(0, 28));
 
     // CUBE OPTIONS
     ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));

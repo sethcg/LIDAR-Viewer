@@ -21,7 +21,6 @@ namespace CubeRenderer {
 
     glm::mat4 cachedView;
     glm::mat4 cachedProjection;
-    bool matricesInitialized = false;
     
     std::string LoadTextFile(const char* path) {
         std::ifstream file(path);
@@ -93,8 +92,6 @@ namespace CubeRenderer {
     }
 
     void InitCamera(Application::AppContext* appContext) {
-        if (matricesInitialized) return;
-
         // COMPUTE BOUNDING BOX OF ALL CUBES
         glm::vec3 min(FLT_MAX), max(-FLT_MAX);
         for (const Cube& cube : cubes) {
@@ -107,18 +104,25 @@ namespace CubeRenderer {
         glm::vec3 center = 0.5f * (min + max);
         float extent = glm::max(max.x - min.x, max.y - min.y) * 0.5f;
 
-        float margin = 10.0f; // extra space
-        float viewSize = extent + margin;
+        // PERSPECTIVE CAMERA
+        float fov = 45.0f;
+        float dist = extent / tan(glm::radians(fov) * 0.5f);
 
-        // STATIC TOP-DOWN CAMERA
+        glm::vec3 camPos = center + glm::vec3(0, -dist * 1.3f, dist * 0.9f);
+        glm::vec3 camTarget = center;
+
         cachedView = glm::lookAt(
-            glm::vec3(center.x, center.y, 200.0f),  // CAMERA HIGH ABOVE
-            glm::vec3(center.x, center.y, 0.0f),    // LOOK AT THE CENTER OF THE CUBES
-            glm::vec3(0.0f, 1.0f, 0.0f)             // UP VECTOR
+            camPos, 
+            camTarget,
+            glm::vec3(0, 0, 1)  // TILT ON Z-AXIS
         );
 
-        cachedProjection = glm::ortho(-viewSize, viewSize, -viewSize, viewSize, 0.1f, 500.0f);
-        matricesInitialized = true;
+        cachedProjection = glm::perspective(
+            glm::radians(fov),
+            float(appContext->width / appContext->height),
+            0.1f,
+            5000.0f
+        );
     }
 
     void Render(Application::AppContext* appContext) {

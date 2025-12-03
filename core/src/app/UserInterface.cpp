@@ -1,3 +1,6 @@
+#include <functional>
+#include <string>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <tinyfiledialogs.h>
@@ -41,7 +44,12 @@ namespace UserInterface {
         colors[ImGuiCol_FrameBgActive] = ImVec4(0.40f, 0.45f, 0.50f, 1.0f);
     }
 
-    void FileSelectButton(AppContext* appContext, const char* text, ImVec2 size) {
+    void FileSelectButton(
+        Application::AppContext* appContext,
+        const char* text, 
+        ImVec2 size,
+        const std::function<void(Application::AppContext*, std::string)>& callback)
+    {
         if (ImGui::Button(text, size)) {
             const char* filters[] = { "*.las", "*.laz" };
             const char* selected = tinyfd_openFileDialog(
@@ -52,12 +60,13 @@ namespace UserInterface {
                 0 // DO NOT ALLOW MULTIPLE SELECTIONS
             );
             if (selected) {
-                appContext->filepath = selected;
+                std::string str_filepath(selected);
+                callback(appContext, str_filepath);
             }
         }
     }
 
-    void FileSelectLabel(const char* text, ImVec2 size, ImVec2 padding) {
+    void FileSelectLabel(const char * text, ImVec2 size, ImVec2 padding) {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
         if (!window) return;
 

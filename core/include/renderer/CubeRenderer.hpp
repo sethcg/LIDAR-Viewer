@@ -18,7 +18,7 @@ namespace CubeRenderer {
 
         float scale;
         
-        Cube(const glm::vec3& pos, const glm::vec3& col = glm::vec3(1.0f)) {
+        Cube(const glm::vec3& pos, glm::vec3 col) {
             position = pos;
             color = col;
             scale = 1.0f;
@@ -78,6 +78,7 @@ namespace CubeRenderer {
     // INITIALIZE OPENGL RESOURCES
     void Init();
 
+    // CACHE OPENGL CAMERA VARIABLES
     void InitCamera(Application::AppContext* appContext);
 
     // RENDER CUBES WITH THE PROVIDED ROTATION AND ANGLE

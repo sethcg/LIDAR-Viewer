@@ -2,6 +2,8 @@
 FILE(GLOB SOURCES 
     src/*.cpp
     src/app/*.cpp
+    src/reader/*.cpp
+    src/renderer/*.cpp
 )
 
 # ADD CORE LIBRARY
@@ -11,6 +13,8 @@ ADD_LIBRARY(core STATIC ${SOURCES})
 TARGET_INCLUDE_DIRECTORIES(core PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/app
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/reader
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/renderer
 )
 
 # LINK LIBRARIES
