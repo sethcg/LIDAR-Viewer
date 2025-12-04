@@ -26,7 +26,7 @@ namespace CubeRenderer {
     };
 
     const float vertices[] = {
-        // BACK FACE (RED)
+        // BACK FACE
         -0.5f,-0.5f,-0.5f,
         0.5f,-0.5f,-0.5f,
         0.5f, 0.5f,-0.5f,
@@ -34,7 +34,7 @@ namespace CubeRenderer {
         -0.5f, 0.5f,-0.5f,
         -0.5f,-0.5f,-0.5f,
 
-        // FRONT FACE (GREEN)
+        // FRONT FACE
         -0.5f,-0.5f, 0.5f,
         0.5f,-0.5f, 0.5f,
         0.5f, 0.5f, 0.5f,
@@ -42,7 +42,7 @@ namespace CubeRenderer {
         -0.5f, 0.5f, 0.5f,
         -0.5f,-0.5f, 0.5f,
 
-        // LEFT FACE (BLUE)
+        // LEFT FACE
         -0.5f, 0.5f, 0.5f,
         -0.5f, 0.5f,-0.5f,
         -0.5f,-0.5f,-0.5f,
@@ -50,7 +50,7 @@ namespace CubeRenderer {
         -0.5f,-0.5f, 0.5f,
         -0.5f, 0.5f, 0.5f,
 
-        // RIGHT FACE (YELLOW)
+        // RIGHT FACE
         0.5f, 0.5f, 0.5f,
         0.5f, 0.5f,-0.5f,
         0.5f,-0.5f,-0.5f,
@@ -58,7 +58,7 @@ namespace CubeRenderer {
         0.5f,-0.5f, 0.5f,
         0.5f, 0.5f, 0.5f,
 
-        // BOTTOM FACE (MAGENTA)
+        // BOTTOM FACE
         -0.5f,-0.5f,-0.5f,
         0.5f,-0.5f,-0.5f,
         0.5f,-0.5f, 0.5f,
@@ -66,7 +66,7 @@ namespace CubeRenderer {
         -0.5f,-0.5f, 0.5f,
         -0.5f,-0.5f,-0.5f,
 
-        // TOP FACE (CYAN)
+        // TOP FACE
         -0.5f, 0.5f,-0.5f,
         0.5f, 0.5f,-0.5f,
         0.5f, 0.5f, 0.5f,
@@ -75,14 +75,24 @@ namespace CubeRenderer {
         -0.5f, 0.5f,-0.5f,
     };
 
-    // INITIALIZE OPENGL RESOURCES
-    void Init();
+    extern GLuint vao;
+    extern GLuint vbo;
+    extern GLuint shaderProgram;
 
-    // CACHE OPENGL CAMERA VARIABLES
+    extern glm::mat4 view;
+    extern glm::mat4 projection;
+
+    extern GLint uMVPLocation;
+    extern GLint cubeColorLocation;
+    extern GLint globalColorLocation;
+
+    void Init(Application::AppContext* appContext);
+
     void InitCamera(Application::AppContext* appContext);
 
-    // RENDER CUBES WITH THE PROVIDED ROTATION AND ANGLE
     void Render(Application::AppContext* appContext);
+
+    void Shutdown(Application::AppContext* appContext);
 
     void Add(const Cube& cube);
     

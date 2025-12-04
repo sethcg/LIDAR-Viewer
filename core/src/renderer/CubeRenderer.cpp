@@ -1,82 +1,38 @@
-
 #include <SDL3/SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <fstream>
-#include <sstream>
-#include <string>
-
-#include <AppContext.hpp>
 #include <CubeRenderer.hpp>
+#include <RendererHelper.hpp>
 
 namespace CubeRenderer {
 
-    GLuint program = 0;             // SHADER PROGRAM
-    GLuint vao = 0;                 // VERTEX ARRAY OBJECT
-    GLuint vbo = 0;                 // VERTEX BUFFER OBJECT
-    
     std::vector<Cube> cubes;
 
-    glm::mat4 cachedView;
-    glm::mat4 cachedProjection;
-    
-    std::string LoadTextFile(const char* path) {
-        std::ifstream file(path);
-        if (!file.is_open()) {
-            SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Failed to load shader file: %s\n", path);
-            return "";
-        }
-        std::stringstream stream;
-        stream << file.rdbuf();
-        return stream.str();
-    }
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint shaderProgram = 0;
 
-    void CheckProgram(GLuint program) {
-        GLint success;
-        glGetProgramiv(program, GL_LINK_STATUS, &success);
-        if(!success) {
-            char log[1024];
-            glGetProgramInfoLog(program, 512, nullptr, log);
-            SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Program link error: %s\n", log);
-        }
-    }
+    glm::mat4 view;
+    glm::mat4 projection;
 
-    GLuint CompileShader(GLenum type, const char* src) {
-        GLuint shader = glCreateShader(type);
-        glShaderSource(shader, 1, &src, nullptr);
-        glCompileShader(shader);
-        GLint success;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if(!success) {
-            char info[512];
-            glGetShaderInfoLog(shader, 512, nullptr, info);
-            SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Shader compile error: %s\n", info);
-        }
-        return shader;
-    }
+    GLint uMVPLocation = -1;
+    GLint cubeColorLocation = -1;
+    GLint globalColorLocation = -1;
 
-    GLuint CreateShaderProgram() {
-        std::string vertexSource = LoadTextFile("../assets/shaders/cube.vert");
-        std::string fragmentSource = LoadTextFile("../assets/shaders/cube.frag");
+    void Init(Application::AppContext* appContext) {
+        std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.vert");
+        std::string fragmentSource = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.frag");
 
-        GLuint vertex = CompileShader(GL_VERTEX_SHADER, vertexSource.c_str());
-        GLuint fragment = CompileShader(GL_FRAGMENT_SHADER, fragmentSource.c_str());
+        GLuint vertexShader   = RendererHelper::CreateShader(vertexSource, GL_VERTEX_SHADER);
+        GLuint fragmentShader = RendererHelper::CreateShader(fragmentSource, GL_FRAGMENT_SHADER);
 
-        GLuint program = glCreateProgram();
-        glAttachShader(program, vertex);
-        glAttachShader(program, fragment);
-        glLinkProgram(program);
-        CheckProgram(program);
+        shaderProgram = RendererHelper::CreateShaderProgram(vertexShader, fragmentShader);
 
-        glDeleteShader(vertex);
-        glDeleteShader(fragment);
-        return program;
-    }
-
-    void Init() {
-        program = CreateShaderProgram();
+        uMVPLocation = glGetUniformLocation(shaderProgram, "uMVP");
+        cubeColorLocation = glGetUniformLocation(shaderProgram, "cubeColor");
+        globalColorLocation = glGetUniformLocation(shaderProgram, "globalColor");
 
         glGenVertexArrays(1, &vao);
         glGenBuffers(1, &vbo);
@@ -85,44 +41,40 @@ namespace CubeRenderer {
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*) (3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+        glBindVertexArray(0);
+
+        glEnable(GL_DEPTH_TEST);
     }
 
     void InitCamera(Application::AppContext* appContext) {
         // COMPUTE BOUNDING BOX OF ALL CUBES
+        if (cubes.empty()) {
+            view = glm::lookAt(glm::vec3(0,0,5), glm::vec3(0,0,0), glm::vec3(0,1,0));
+            projection = glm::perspective(glm::radians(45.0f), float(appContext->width) / appContext->height, 0.1f, 100.0f);
+            return;
+        }
+
         glm::vec3 min(FLT_MAX), max(-FLT_MAX);
         for (const Cube& cube : cubes) {
-            glm::vec3 pos = cube.position;
+            glm::vec3 p = cube.position;
             float s = cube.scale * appContext->globalScale;
-            min = glm::min(min, pos - glm::vec3(s));
-            max = glm::max(max, pos + glm::vec3(s));
+            min = glm::min(min, p - glm::vec3(s));
+            max = glm::max(max, p + glm::vec3(s));
         }
 
         glm::vec3 center = 0.5f * (min + max);
         float extent = glm::max(max.x - min.x, max.y - min.y) * 0.5f;
-
-        // PERSPECTIVE CAMERA
         float fov = 45.0f;
         float dist = extent / tan(glm::radians(fov) * 0.5f);
 
         glm::vec3 camPos = center + glm::vec3(0, -dist * 1.3f, dist * 0.9f);
         glm::vec3 camTarget = center;
 
-        cachedView = glm::lookAt(
-            camPos, 
-            camTarget,
-            glm::vec3(0, 0, 1)  // TILT ON Z-AXIS
-        );
-
-        cachedProjection = glm::perspective(
-            glm::radians(fov),
-            float(appContext->width / appContext->height),
-            0.1f,
-            5000.0f
-        );
+        view = glm::lookAt(camPos, camTarget, glm::vec3(0,0,1));
+        projection = glm::perspective(glm::radians(fov), float(appContext->width) / appContext->height, 0.1f, 5000.0f);
     }
 
     void Render(Application::AppContext* appContext) {
@@ -130,33 +82,38 @@ namespace CubeRenderer {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glUseProgram(program);
+        glUseProgram(shaderProgram);
+        glBindVertexArray(vao);
 
-        GLint globalColorLocation = glGetUniformLocation(program, "globalColor");
         glUniform3fv(globalColorLocation, 1, glm::value_ptr(appContext->globalColor));
 
-        for(const Cube& cube : cubes) {
+        for (const Cube& cube : cubes) {
             glm::mat4 model = glm::translate(glm::mat4(1.0f), cube.position);
             model = glm::scale(model, glm::vec3(cube.scale * appContext->globalScale));
+            glm::mat4 mvp = projection * view * model;
 
-            glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, glm::value_ptr(cachedView));
-            glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(cachedProjection));
+            glUniformMatrix4fv(uMVPLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+            glUniform3fv(cubeColorLocation, 1, glm::value_ptr(cube.color));
 
-            // SET UNIFORM COLOR
-            GLint colorLocation = glGetUniformLocation(program, "cubeColor");
-            glUniform3fv(colorLocation, 1, glm::value_ptr(cube.color));
-
-            glBindVertexArray(vao);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        glBindVertexArray(0);
+        glUseProgram(0);
     }
 
-    void Add(const Cube& cube) { 
-        cubes.push_back(cube); 
+    void Shutdown(Application::AppContext* appContext) {
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+        glDeleteProgram(shaderProgram);
     }
 
-    void Clear() { 
-        cubes.clear(); 
+    void Add(const Cube& cube) {
+        cubes.push_back(cube);
     }
+
+    void Clear() {
+        cubes.clear();
+    }
+
 }

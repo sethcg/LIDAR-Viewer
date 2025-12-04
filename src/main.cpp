@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -15,6 +16,7 @@
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
 #include <Point.hpp>
+#include <TextRenderer.hpp>
 
 using namespace Application;
 
@@ -40,16 +42,21 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         return SDL_APP_FAILURE;
     }
 
-    // SETUP OPENGL (WITH GLAD)
-    if(CreateGLContext(appContext)) {
+    // SETUP OPENGL WITH THE OPTION TO DISABLE VSYNC (FPS LIMIT)
+    if(CreateGLContext(appContext, false)) {
         SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
         return SDL_APP_FAILURE;
     };
 
-    // INITIALIZE RENDERER
-    glEnable(GL_DEPTH_TEST);
+    // INITIALIZE FONT
+    if (!TTF_Init()) SDL_Log("ERROR INITIALIZING SDL_TTF: %s", SDL_GetError());
+    appContext->textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18.0f);
+    if (!appContext->textFont) {
+        SDL_Log("TTF_OPENFONT FAILED: %s", SDL_GetError());
+    }
 
-    CubeRenderer::Init();
+    CubeRenderer::Init(appContext);
+    TextRenderer::Init(appContext);
     
     // SETUP IMGUI
     IMGUI_CHECKVERSION();
@@ -133,6 +140,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     
     CubeRenderer::Render(appContext);
 
+    // UPDATE/RENDER "FRAMES PER SECOND"
+    TextRenderer::UpdateFPS(appContext);
+    TextRenderer::Render(appContext);
+
     // RENDER IMGUI
     appContext->imgui_data = ImGui::GetDrawData();
     ImGui_ImplOpenGL3_RenderDrawData(appContext->imgui_data);
@@ -144,11 +155,15 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
     AppContext* appContext = (AppContext*) appstate;
 
+    TextRenderer::Shutdown(appContext);
+    CubeRenderer::Shutdown(appContext);
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 
     SDL_GL_DestroyContext(appContext->opengl_context);
     SDL_DestroyWindow(appContext->window);
+    TTF_Quit();
     SDL_Quit();
 }

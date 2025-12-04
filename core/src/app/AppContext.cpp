@@ -18,9 +18,9 @@ namespace Application {
         return SDL_APP_CONTINUE;
     }
 
-    SDL_AppResult CreateGLContext(AppContext* appContext) {
+    SDL_AppResult CreateGLContext(AppContext* appContext, bool enableVsync) {
         appContext->opengl_context = SDL_GL_CreateContext(appContext->window);
-        SDL_GL_SetSwapInterval(1);
+        SDL_GL_SetSwapInterval((enableVsync ? 1 : 0));
         if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
             SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "%s", "Failed to load GLAD\n");
             return SDL_APP_FAILURE;

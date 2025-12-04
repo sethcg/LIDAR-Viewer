@@ -21,6 +21,7 @@ TARGET_INCLUDE_DIRECTORIES(core PUBLIC
 TARGET_LINK_LIBRARIES(core PUBLIC 
     imgui
     SDL3::SDL3
+    SDL3_ttf::SDL3_ttf
     OpenGL::GL
     glad::glad
     tinyfiledialog
