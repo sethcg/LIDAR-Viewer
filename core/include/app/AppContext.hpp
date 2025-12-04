@@ -23,6 +23,19 @@
 
 namespace Application {
 
+    struct GlobalState {
+        bool changed;
+        
+        glm::vec3 color;
+        float scale;
+
+        GlobalState() {
+            changed = false;
+            color = glm::vec3(1.0f);
+            scale = 0.5f;
+        }
+    };
+
     struct FrameRate {
         GLuint fpsTexture;
         int fpsTexW;
@@ -51,10 +64,9 @@ namespace Application {
         TTF_Font* textFont;
         FrameRate* frameRate;
 
-        std::vector<Data::Point> points;
+        GlobalState* globalState;
 
-        glm::vec3 globalColor;
-        float globalScale;
+        std::vector<Data::Point> points;
 
         std::string filepath;
 
@@ -64,11 +76,10 @@ namespace Application {
             window = nullptr;
             imgui_data = nullptr;     
             opengl_context = nullptr;
+
             frameRate = new FrameRate();
-
-            globalColor = glm::vec3(1.0f);
-            globalScale = 0.5f;
-
+            globalState = new GlobalState();
+            
             filepath = "";
         }
     };

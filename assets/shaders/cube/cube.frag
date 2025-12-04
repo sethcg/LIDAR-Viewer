@@ -1,8 +1,10 @@
 #version 330 core
+
+in vec3 vColor;
+uniform vec3 uGlobalColor;
+
 out vec4 FragColor;
-uniform vec3 cubeColor;
-uniform vec3 globalColor;
-void main()
-{
-    FragColor = vec4(cubeColor * globalColor, 1.0);
+
+void main() {
+    FragColor = vec4(vColor * uGlobalColor, 1.0);
 }

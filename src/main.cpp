@@ -127,17 +127,27 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
                 ));
             }
             CubeRenderer::InitCamera(appContext);
+            appContext->globalState->changed = true;
         });
     ImGui::SameLine(0.0f, 10.0f);
     UserInterface::FileSelectLabel(appContext->filepath.c_str(), ImVec2(0, 28));
 
-    // CUBE OPTIONS
-    ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
-    ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
+    // GLOBAL COLOR SELECTION
+    UserInterface::TrackChange(
+        ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalState->color)),
+        &appContext->globalState->changed
+    );
+
+    // GLOBAL SCALE SLIDER
+    UserInterface::TrackChange(
+        ImGui::SliderFloat("Global Scale", &appContext->globalState->scale, 0.05f, 1.0f),
+        &appContext->globalState->changed
+    );
 
     ImGui::End();
     ImGui::Render();
     
+    CubeRenderer::UpdateInstanceBuffers(appContext);
     CubeRenderer::Render(appContext);
 
     // UPDATE/RENDER "FRAMES PER SECOND"

@@ -25,6 +25,8 @@ namespace CubeRenderer {
         }
     };
 
+    // TODO: PERFORMANCE IMPROVEMENT TO USE "glm::vec3" AND CUBE INDICES
+    // AND ALLOW FOR USING "glDrawElements" INSTEAD OF "glDrawArrays"
     const float vertices[] = {
         // BACK FACE
         -0.5f,-0.5f,-0.5f,
@@ -75,20 +77,29 @@ namespace CubeRenderer {
         -0.5f, 0.5f,-0.5f,
     };
 
+    extern std::vector<Cube> cubes;
+
     extern GLuint vao;
     extern GLuint vbo;
+    extern GLuint instanceVBO;
+    extern GLuint instanceColorVBO;
     extern GLuint shaderProgram;
 
     extern glm::mat4 view;
     extern glm::mat4 projection;
 
-    extern GLint uMVPLocation;
-    extern GLint cubeColorLocation;
-    extern GLint globalColorLocation;
+    extern GLint uViewProjectionLocation;
+    extern GLint uGlobalColorLocation;
+    extern GLint uGlobalScaleLocation;
+
+    extern std::vector<glm::mat4> instanceModels;
+    extern std::vector<glm::vec3> instanceColors;
 
     void Init(Application::AppContext* appContext);
 
     void InitCamera(Application::AppContext* appContext);
+
+    void UpdateInstanceBuffers(Application::AppContext* appContext);
 
     void Render(Application::AppContext* appContext);
 

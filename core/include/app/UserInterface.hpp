@@ -13,6 +13,8 @@ namespace UserInterface {
 
     void SetCustomTheme();
 
+    void TrackChange(bool updated, bool* state);
+
     void FileSelectButton(
         Application::AppContext* appContext,
         const char* text, 
