@@ -9,6 +9,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <AppContext.hpp>
+#include <Camera.hpp>
 
 namespace CubeRenderer {
 
@@ -77,27 +78,7 @@ namespace CubeRenderer {
         -0.5f, 0.5f,-0.5f,
     };
 
-    extern std::vector<Cube> cubes;
-
-    extern GLuint vao;
-    extern GLuint vbo;
-    extern GLuint instanceVBO;
-    extern GLuint instanceColorVBO;
-    extern GLuint shaderProgram;
-
-    extern glm::mat4 view;
-    extern glm::mat4 projection;
-
-    extern GLint uViewProjectionLocation;
-    extern GLint uGlobalColorLocation;
-    extern GLint uGlobalScaleLocation;
-
-    extern std::vector<glm::mat4> instanceModels;
-    extern std::vector<glm::vec3> instanceColors;
-
     void Init(Application::AppContext* appContext);
-
-    void InitCamera(Application::AppContext* appContext);
 
     void UpdateInstanceBuffers(Application::AppContext* appContext);
 
@@ -108,6 +89,8 @@ namespace CubeRenderer {
     void Add(const Cube& cube);
     
     void Clear();
+
+    const std::vector<Cube>& GetCubes();
 }
 
 #endif

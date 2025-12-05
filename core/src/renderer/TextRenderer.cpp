@@ -6,15 +6,15 @@
 
 namespace TextRenderer {
 
-    GLuint shaderProgram;
-    GLuint vao;
-    GLuint vbo;
+    static GLuint shaderProgram;
+    static GLuint vao;
+    static GLuint vbo;
 
-    GLuint textTexture;
-    int textureWidth = 0;
-    int textureHeight = 0;
+    static GLuint textTexture;
+    static int textureWidth = 0;
+    static int textureHeight = 0;
 
-    GLint uProjLocation = -1;
+    static GLint uProjLocation = -1;
 
     void Init(Application::AppContext* appContext) {
         std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/text/text.vert");

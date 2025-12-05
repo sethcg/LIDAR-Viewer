@@ -7,16 +7,6 @@
 
 namespace TextRenderer {
 
-    extern GLuint shaderProgram;
-    extern GLuint vao;
-    extern GLuint vbo;
-
-    extern GLuint textTexture;
-    extern int textureWidth;
-    extern int textureHeight;
-
-    extern GLint uProjLocation;
-
     void Init(Application::AppContext* appContext);
 
     void UpdateFPS(Application::AppContext* appContext);

@@ -8,23 +8,20 @@
 
 namespace CubeRenderer {
 
-    std::vector<Cube> cubes;
+    static std::vector<Cube> cubes;
 
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLuint instanceVBO = 0;
-    GLuint instanceColorVBO = 0;
-    GLuint shaderProgram = 0;
+    static GLuint vao = 0;
+    static GLuint vbo = 0;
+    static GLuint instanceVBO = 0;
+    static GLuint instanceColorVBO = 0;
+    static GLuint shaderProgram = 0;
 
-    glm::mat4 view;
-    glm::mat4 projection;
+    static GLint uViewProjectionLocation = -1;
+    static GLint uGlobalColorLocation = -1;
+    static GLint uGlobalScaleLocation = -1;
 
-    GLint uViewProjectionLocation = -1;
-    GLint uGlobalColorLocation = -1;
-    GLint uGlobalScaleLocation = -1;
-
-    std::vector<glm::mat4> instanceModels;
-    std::vector<glm::vec3> instanceColors;
+    static std::vector<glm::mat4> instanceModels;
+    static std::vector<glm::vec3> instanceColors;
 
     void Init(Application::AppContext* appContext) {
         std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.vert");
@@ -73,33 +70,6 @@ namespace CubeRenderer {
         glEnable(GL_DEPTH_TEST);
     }
 
-    void InitCamera(Application::AppContext* appContext) {
-        if (cubes.empty()) {
-            view = glm::lookAt(glm::vec3(0,0,5), glm::vec3(0,0,0), glm::vec3(0,1,0));
-            projection = glm::perspective(glm::radians(45.0f), float(appContext->width) / appContext->height, 0.1f, 100.0f);
-            return;
-        }
-
-        glm::vec3 min(FLT_MAX), max(-FLT_MAX);
-        for (const Cube& cube : cubes) {
-            glm::vec3 position = cube.position;
-            float scale = cube.scale * appContext->globalState->scale;
-            min = glm::min(min, position - glm::vec3(scale));
-            max = glm::max(max, position + glm::vec3(scale));
-        }
-
-        glm::vec3 center = 0.5f * (min + max);
-        float extent = glm::max(max.x - min.x, max.y - min.y) * 0.5f;
-        float fov = 45.0f;
-        float dist = extent / tan(glm::radians(fov) * 0.5f);
-
-        glm::vec3 camPos = center + glm::vec3(0, -dist * 1.3f, dist * 0.9f);
-        glm::vec3 camTarget = center;
-
-        view = glm::lookAt(camPos, camTarget, glm::vec3(0,0,1));
-        projection = glm::perspective(glm::radians(fov), float(appContext->width) / appContext->height, 0.1f, 5000.0f);
-    }
-
     void UpdateInstanceBuffers(Application::AppContext* appContext) {
         if (cubes.empty()) return;
         if(!appContext->globalState->changed) return;
@@ -140,7 +110,7 @@ namespace CubeRenderer {
         glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalState->color));
         glUniform1f(uGlobalScaleLocation, globalState->scale);
 
-        glm::mat4 viewProjection = projection * view;
+        glm::mat4 viewProjection = Camera::GetProjection() * Camera::GetView();
         glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
 
         glDrawArraysInstanced(GL_TRIANGLES, 0, 36, (GLsizei)cubes.size());
@@ -165,4 +135,6 @@ namespace CubeRenderer {
         cubes.clear();
     }
 
+    // ACCESSOR METHODS
+    const std::vector<Cube>& GetCubes() { return cubes; };
 }

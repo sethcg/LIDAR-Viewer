@@ -13,6 +13,7 @@
 
 #include <AppContext.hpp>
 #include <UserInterface.hpp>
+#include <Camera.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
 #include <Point.hpp>
@@ -55,6 +56,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         SDL_Log("TTF_OPENFONT FAILED: %s", SDL_GetError());
     }
 
+    Camera::Init(appContext);
     CubeRenderer::Init(appContext);
     TextRenderer::Init(appContext);
     
@@ -126,7 +128,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
                     Data::ColorMap(point.normalized)
                 ));
             }
-            CubeRenderer::InitCamera(appContext);
+            Camera::Update(appContext);
             appContext->globalState->changed = true;
         });
     ImGui::SameLine(0.0f, 10.0f);
