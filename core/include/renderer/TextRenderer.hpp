@@ -7,12 +7,12 @@
 
 namespace TextRenderer {
 
-    void Init(Application::AppContext* appContext);
+    void Init(TTF_Font* textFont);
 
-    void UpdateFPS(Application::AppContext* appContext);
+    void UpdateFPS();
 
     void Render(Application::AppContext* appContext);
     
-    void Shutdown(Application::AppContext* appContext);
+    void Shutdown();
 
 }

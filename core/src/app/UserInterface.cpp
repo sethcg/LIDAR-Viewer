@@ -44,12 +44,6 @@ namespace UserInterface {
         colors[ImGuiCol_FrameBgActive] = ImVec4(0.40f, 0.45f, 0.50f, 1.0f);
     }
 
-    void TrackChange(bool updated, bool* state) {
-        if (updated && state) {
-            *state = true;
-        }
-    }
-
     void FileSelectButton(
         Application::AppContext* appContext,
         const char* text, 

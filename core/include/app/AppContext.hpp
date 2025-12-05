@@ -5,9 +5,6 @@
 #include <string>
 
 #include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
-#include <glad/glad.h>
-#include <glm/glm.hpp>
 #include <imgui.h>
 
 #include <Point.hpp>
@@ -23,37 +20,6 @@
 
 namespace Application {
 
-    struct GlobalState {
-        bool changed;
-        
-        glm::vec3 color;
-        float scale;
-
-        GlobalState() {
-            changed = false;
-            color = glm::vec3(1.0f);
-            scale = 0.5f;
-        }
-    };
-
-    struct FrameRate {
-        GLuint fpsTexture;
-        int fpsTexW;
-        int fpsTexH;
-        float fps;
-        Uint64 lastFPSTime;
-        int frameCount;
-
-        FrameRate() {
-            fpsTexture = 0;
-            fpsTexW = 0;
-            fpsTexH = 0;
-            fps = 0.0f;
-            lastFPSTime = 0;
-            frameCount = 0;
-        }
-    };
-
     struct AppContext {
         int width;                      // CURRENT WINDOW WIDTH
         int height;                     // CURRENT WINDOW HEIGHT
@@ -61,11 +27,6 @@ namespace Application {
         ImDrawData* imgui_data;
         SDL_GLContext opengl_context;   // OPENGL CONTEXT
         
-        TTF_Font* textFont;
-        FrameRate* frameRate;
-
-        GlobalState* globalState;
-
         std::vector<Data::Point> points;
 
         std::string filepath;
@@ -77,9 +38,6 @@ namespace Application {
             imgui_data = nullptr;     
             opengl_context = nullptr;
 
-            frameRate = new FrameRate();
-            globalState = new GlobalState();
-            
             filepath = "";
         }
     };
@@ -87,6 +45,7 @@ namespace Application {
     SDL_AppResult CreateWindow(AppContext* appContext, const char* title);
 
     SDL_AppResult CreateGLContext(AppContext* appContext, bool enableVsync);
+    
 }
 
 #endif

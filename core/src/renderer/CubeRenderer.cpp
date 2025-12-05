@@ -8,6 +8,10 @@
 
 namespace CubeRenderer {
 
+    static bool stateChanged = true;
+    static float globalScale = 0.5f;
+    static glm::vec3 globalColor = glm::vec3(1.0f);
+
     static std::vector<Cube> cubes;
 
     static GLuint vao = 0;
@@ -23,7 +27,7 @@ namespace CubeRenderer {
     static std::vector<glm::mat4> instanceModels;
     static std::vector<glm::vec3> instanceColors;
 
-    void Init(Application::AppContext* appContext) {
+    void Init() {
         std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.vert");
         std::string fragmentSource = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.frag");
 
@@ -70,9 +74,9 @@ namespace CubeRenderer {
         glEnable(GL_DEPTH_TEST);
     }
 
-    void UpdateInstanceBuffers(Application::AppContext* appContext) {
+    void UpdateInstanceBuffers() {
         if (cubes.empty()) return;
-        if(!appContext->globalState->changed) return;
+        if(!stateChanged) return;
 
         std::vector<glm::mat4> models(cubes.size());
         std::vector<glm::vec3> colors(cubes.size());
@@ -89,12 +93,10 @@ namespace CubeRenderer {
         glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(glm::vec3), colors.data(), GL_STATIC_DRAW);
 
         // CHANGE STATE (AVOIDS UPDATING BUFFERS EACH RENDER FRAME)
-        appContext->globalState->changed = false;
+        stateChanged = false;
     }
 
     void Render(Application::AppContext* appContext) {
-        Application::GlobalState* globalState = appContext->globalState;
-
         glViewport(0, 0, appContext->width, appContext->height);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -107,8 +109,8 @@ namespace CubeRenderer {
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
 
-        glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalState->color));
-        glUniform1f(uGlobalScaleLocation, globalState->scale);
+        glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalColor));
+        glUniform1f(uGlobalScaleLocation, globalScale);
 
         glm::mat4 viewProjection = Camera::GetProjection() * Camera::GetView();
         glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
@@ -119,7 +121,7 @@ namespace CubeRenderer {
         glUseProgram(0);
     }
 
-    void Shutdown(Application::AppContext* appContext) {
+    void Shutdown() {
         glDeleteBuffers(1, &vbo);
         glDeleteBuffers(1, &instanceVBO);
         glDeleteBuffers(1, &instanceColorVBO);
@@ -137,4 +139,10 @@ namespace CubeRenderer {
 
     // ACCESSOR METHODS
     const std::vector<Cube>& GetCubes() { return cubes; };
+
+    const void SetStateChanged(bool state) { stateChanged = state; };
+
+    float& GetGlobalScale() { return globalScale; };
+    glm::vec3& GetGlobalColor() { return globalColor; };
+
 }

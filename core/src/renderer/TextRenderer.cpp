@@ -6,17 +6,37 @@
 
 namespace TextRenderer {
 
+    static TTF_Font* textFont;
+
+    struct FrameRate {
+        GLuint texture;
+        int texWidth;
+        int texHeight;
+        float fps;
+        Uint64 lastTime;
+        int frameCount;
+
+        FrameRate() {
+            texture = 0;
+            texWidth = 0;
+            texHeight = 0;
+            fps = 0.0f;
+            lastTime = 0;
+            frameCount = 0;
+        }
+    };
+
+    static FrameRate frameRate;
+
     static GLuint shaderProgram;
     static GLuint vao;
     static GLuint vbo;
 
-    static GLuint textTexture;
-    static int textureWidth = 0;
-    static int textureHeight = 0;
-
     static GLint uProjLocation = -1;
 
-    void Init(Application::AppContext* appContext) {
+    void Init(TTF_Font* font) {
+        textFont = font;
+
         std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/text/text.vert");
         std::string fragmentSource = RendererHelper::LoadTextFile("../assets/shaders/text/text.frag");
 
@@ -49,8 +69,8 @@ namespace TextRenderer {
         glBindVertexArray(0);
 
         // TEXTURE
-        glGenTextures(1, &textTexture);
-        glBindTexture(GL_TEXTURE_2D, textTexture);
+        glGenTextures(1, &frameRate.texture);
+        glBindTexture(GL_TEXTURE_2D, frameRate.texture);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -62,45 +82,44 @@ namespace TextRenderer {
         glUseProgram(0);
     }
 
-    void UpdateFPS(Application::AppContext* appContext) {
-        Application::FrameRate* frameRate = appContext->frameRate;
-        frameRate->frameCount++;
+    void UpdateFPS() {
+        frameRate.frameCount++;
 
         Uint64 currentTime = SDL_GetTicks();
-        if (currentTime - frameRate->lastFPSTime < 500) return;
+        if (currentTime - frameRate.lastTime < 500) return;
 
-        frameRate->fps = (float)frameRate->frameCount * 1000.0f / (currentTime - frameRate->lastFPSTime);
-        frameRate->lastFPSTime = currentTime;
-        frameRate->frameCount = 0;
+        frameRate.fps = (float)frameRate.frameCount * 1000.0f / (currentTime - frameRate.lastTime);
+        frameRate.lastTime = currentTime;
+        frameRate.frameCount = 0;
 
         char buffer[64];
-        snprintf(buffer, sizeof(buffer), "FPS: %.1f", frameRate->fps);
+        snprintf(buffer, sizeof(buffer), "FPS: %.1f", frameRate.fps);
 
         SDL_Color white = {255, 255, 255, SDL_ALPHA_OPAQUE};
-        SDL_Surface* surface = TTF_RenderText_Blended(appContext->textFont, buffer, 0, white);
+        SDL_Surface* surface = TTF_RenderText_Blended(textFont, buffer, 0, white);
         if (!surface) return;
 
         // FORMAT THE SURFACE
         SDL_Surface* convertedSurface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
         SDL_DestroySurface(surface);
 
-        textureWidth = convertedSurface->w;
-        textureHeight = convertedSurface->h;
+        frameRate.texWidth = convertedSurface->w;
+        frameRate.texHeight = convertedSurface->h;
 
-        glBindTexture(GL_TEXTURE_2D, textTexture);
+        glBindTexture(GL_TEXTURE_2D, frameRate.texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, convertedSurface->w, convertedSurface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, convertedSurface->pixels);
 
         SDL_DestroySurface(convertedSurface);
     }
 
     void Render(Application::AppContext* appContext) {
-        if (textureWidth == 0 || textureHeight == 0) return;
+        if (frameRate.texWidth == 0 || frameRate.texHeight == 0) return;
 
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textTexture);
+        glBindTexture(GL_TEXTURE_2D, frameRate.texture);
 
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
@@ -108,11 +127,11 @@ namespace TextRenderer {
 
         glm::mat4 proj = glm::ortho(0.0f, (float) appContext->width, (float) appContext->height, 0.0f);
 
-        float x = (float) appContext->width - textureWidth - 10;
+        float x = (float) appContext->width - frameRate.texWidth - 10;
         float y = 10.0f;
 
         glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(x, y, 0.f));
-        model = glm::scale(model, glm::vec3((float)textureWidth, (float)textureHeight, 1.f));
+        model = glm::scale(model, glm::vec3((float)frameRate.texWidth, (float)frameRate.texHeight, 1.f));
 
         glm::mat4 mvp = proj * model;
         glUniformMatrix4fv(uProjLocation, 1, GL_FALSE, glm::value_ptr(mvp));
@@ -126,8 +145,8 @@ namespace TextRenderer {
         glEnable(GL_DEPTH_TEST);
     }
 
-    void Shutdown(Application::AppContext* appContext) {
-        glDeleteTextures(1, &textTexture);
+    void Shutdown() {
+        glDeleteTextures(1, &frameRate.texture);
         glDeleteProgram(shaderProgram);
         glDeleteBuffers(1, &vbo);
         glDeleteVertexArrays(1, &vao);

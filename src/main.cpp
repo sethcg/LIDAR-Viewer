@@ -49,16 +49,16 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         return SDL_APP_FAILURE;
     };
 
-    // INITIALIZE FONT
+    // INITIALIZE TEXT FONT
     if (!TTF_Init()) SDL_Log("ERROR INITIALIZING SDL_TTF: %s", SDL_GetError());
-    appContext->textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18.0f);
-    if (!appContext->textFont) {
+    TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18.0f);
+    if (!textFont) {
         SDL_Log("TTF_OPENFONT FAILED: %s", SDL_GetError());
     }
 
     Camera::Init(appContext);
-    CubeRenderer::Init(appContext);
-    TextRenderer::Init(appContext);
+    CubeRenderer::Init();
+    TextRenderer::Init(textFont);
     
     // SETUP IMGUI
     IMGUI_CHECKVERSION();
@@ -104,7 +104,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     ImVec2 maxSize(FLT_MAX, FLT_MAX);
     ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
-    ImGui::Begin("Control Panel");
+    ImGui::Begin("##panel");
 
     // FILE SELECTION
     UserInterface::FileSelectButton(appContext, "Select File", ImVec2(0, 28),
@@ -128,32 +128,46 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
                     Data::ColorMap(point.normalized)
                 ));
             }
-            Camera::Update(appContext);
-            appContext->globalState->changed = true;
+            Camera::RecalculateBounds();
+            CubeRenderer::SetStateChanged(true);
         });
     ImGui::SameLine(0.0f, 10.0f);
     UserInterface::FileSelectLabel(appContext->filepath.c_str(), ImVec2(0, 28));
 
-    // GLOBAL COLOR SELECTION
-    UserInterface::TrackChange(
-        ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalState->color)),
-        &appContext->globalState->changed
-    );
+    // CUBE SETTINGS TITLE
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+    ImGui::Text("Cube");
+    ImGui::PopStyleColor();
 
-    // GLOBAL SCALE SLIDER
-    UserInterface::TrackChange(
-        ImGui::SliderFloat("Global Scale", &appContext->globalState->scale, 0.05f, 1.0f),
-        &appContext->globalState->changed
-    );
+    // GLOBAL COLOR (TINT)
+    ImGui::ColorEdit3("Global Color", glm::value_ptr(CubeRenderer::GetGlobalColor()));
+
+    // GLOBAL SCALE
+    ImGui::SliderFloat("Global Scale", &CubeRenderer::GetGlobalScale(), 0.05f, 1.0f);
+
+    // CAMERA SETTINGS TITLE
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+    ImGui::Text("Camera");
+    ImGui::PopStyleColor();
+
+    // CAMERA ROTATION SPEED
+    ImGui::SliderFloat("Rotation Speed", &Camera::GetRotationSpeed(), 0.0f, 5.0f);
+
+    // CAMERA ZOOM
+    ImGui::SliderFloat("Zoom", &Camera::GetZoom(), 0.2f, 5.0f);
 
     ImGui::End();
     ImGui::Render();
-    
-    CubeRenderer::UpdateInstanceBuffers(appContext);
+
+    Camera::Update();
+
+    CubeRenderer::UpdateInstanceBuffers();
     CubeRenderer::Render(appContext);
 
     // UPDATE/RENDER "FRAMES PER SECOND"
-    TextRenderer::UpdateFPS(appContext);
+    TextRenderer::UpdateFPS();
     TextRenderer::Render(appContext);
 
     // RENDER IMGUI
@@ -167,8 +181,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
     AppContext* appContext = (AppContext*) appstate;
 
-    TextRenderer::Shutdown(appContext);
-    CubeRenderer::Shutdown(appContext);
+    TextRenderer::Shutdown();
+    CubeRenderer::Shutdown();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();

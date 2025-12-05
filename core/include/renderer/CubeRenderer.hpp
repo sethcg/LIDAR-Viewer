@@ -78,19 +78,25 @@ namespace CubeRenderer {
         -0.5f, 0.5f,-0.5f,
     };
 
-    void Init(Application::AppContext* appContext);
+    void Init();
 
-    void UpdateInstanceBuffers(Application::AppContext* appContext);
+    void UpdateInstanceBuffers();
 
     void Render(Application::AppContext* appContext);
 
-    void Shutdown(Application::AppContext* appContext);
+    void Shutdown();
 
     void Add(const Cube& cube);
     
     void Clear();
 
+    // ACCESSOR METHODS
     const std::vector<Cube>& GetCubes();
+    
+    const void SetStateChanged(bool state);
+
+    float& GetGlobalScale();
+    glm::vec3& GetGlobalColor();
 }
 
 #endif
