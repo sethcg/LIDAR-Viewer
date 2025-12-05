@@ -49,12 +49,12 @@ namespace Camera {
         sceneRadius = sceneDist * 1.3f;
     }
 
-    void Init(Application::AppContext* appContext) {
+    void Init() {
         RecalculateBounds();
 
         projection = glm::perspective(
             glm::radians(45.0f),
-            float(appContext->width) / appContext->height,
+            float(Application::GetWindowWidth()) / Application::GetWindowHeight(),
             0.1f, 1000.0f
         );
     }

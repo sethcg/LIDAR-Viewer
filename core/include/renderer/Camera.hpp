@@ -9,7 +9,7 @@ namespace Camera {
 
     void RecalculateBounds();
 
-    void Init(Application::AppContext* appContext);
+    void Init();
 
     void Update();
 

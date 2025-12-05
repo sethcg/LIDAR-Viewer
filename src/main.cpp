@@ -56,7 +56,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         SDL_Log("TTF_OPENFONT FAILED: %s", SDL_GetError());
     }
 
-    Camera::Init(appContext);
+    Camera::Init();
     CubeRenderer::Init();
     TextRenderer::Init(textFont);
     
@@ -84,7 +84,11 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
         case SDL_EVENT_WINDOW_RESIZED:
-            SDL_GetWindowSize(appContext->window, &appContext->width, &appContext->height);
+            int width, height;
+            SDL_GetWindowSize(appContext->window, &width, &height);
+            Application::GetWindowWidth() = width;
+            Application::GetWindowHeight() = height;
+            break;
     }
 
     ImGui_ImplSDL3_ProcessEvent(event);
@@ -94,7 +98,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
     AppContext* appContext = (AppContext*) appstate;
-    
+
     // INITIALIZE IMGUI FRAME
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
@@ -163,14 +167,15 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     Camera::Update();
 
+    // CUBE RENDER
     CubeRenderer::UpdateInstanceBuffers();
-    CubeRenderer::Render(appContext);
+    CubeRenderer::Render();
 
-    // UPDATE/RENDER "FRAMES PER SECOND"
+    // FPS RENDER
     TextRenderer::UpdateFPS();
-    TextRenderer::Render(appContext);
+    TextRenderer::Render();
 
-    // RENDER IMGUI
+    // IMGUI RENDER
     appContext->imgui_data = ImGui::GetDrawData();
     ImGui_ImplOpenGL3_RenderDrawData(appContext->imgui_data);
 

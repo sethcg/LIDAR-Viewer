@@ -21,8 +21,6 @@
 namespace Application {
 
     struct AppContext {
-        int width;                      // CURRENT WINDOW WIDTH
-        int height;                     // CURRENT WINDOW HEIGHT
         SDL_Window* window;             
         ImDrawData* imgui_data;
         SDL_GLContext opengl_context;   // OPENGL CONTEXT
@@ -32,8 +30,6 @@ namespace Application {
         std::string filepath;
 
         AppContext() {
-            width = WINDOW_WIDTH;
-            height = WINDOW_HEIGHT;
             window = nullptr;
             imgui_data = nullptr;     
             opengl_context = nullptr;
@@ -45,7 +41,11 @@ namespace Application {
     SDL_AppResult CreateWindow(AppContext* appContext, const char* title);
 
     SDL_AppResult CreateGLContext(AppContext* appContext, bool enableVsync);
-    
+
+    // ACCESSOR METHODS
+    int& GetWindowWidth();
+    int& GetWindowHeight();
+
 }
 
 #endif

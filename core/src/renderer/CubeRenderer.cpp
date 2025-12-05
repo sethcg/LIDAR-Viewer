@@ -96,8 +96,8 @@ namespace CubeRenderer {
         stateChanged = false;
     }
 
-    void Render(Application::AppContext* appContext) {
-        glViewport(0, 0, appContext->width, appContext->height);
+    void Render() {
+        glViewport(0, 0, Application::GetWindowWidth(), Application::GetWindowHeight());
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

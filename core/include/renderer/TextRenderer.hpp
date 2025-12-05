@@ -11,7 +11,7 @@ namespace TextRenderer {
 
     void UpdateFPS();
 
-    void Render(Application::AppContext* appContext);
+    void Render();
     
     void Shutdown();
 

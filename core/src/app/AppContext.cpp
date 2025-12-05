@@ -5,6 +5,9 @@
 
 namespace Application {
 
+    static int windowWidth = WINDOW_WIDTH;
+    static int windowHeight = WINDOW_HEIGHT;
+
     SDL_AppResult CreateWindow(AppContext* appContext, const char* title) {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -27,5 +30,9 @@ namespace Application {
         }
         return SDL_APP_CONTINUE;
     }
+
+    // ACCESSOR METHODS
+    int& GetWindowWidth() { return windowWidth; };
+    int& GetWindowHeight() { return windowHeight; };
 
 }

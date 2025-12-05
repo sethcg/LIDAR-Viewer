@@ -112,7 +112,7 @@ namespace TextRenderer {
         SDL_DestroySurface(convertedSurface);
     }
 
-    void Render(Application::AppContext* appContext) {
+    void Render() {
         if (frameRate.texWidth == 0 || frameRate.texHeight == 0) return;
 
         glUseProgram(shaderProgram);
@@ -125,9 +125,9 @@ namespace TextRenderer {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glm::mat4 proj = glm::ortho(0.0f, (float) appContext->width, (float) appContext->height, 0.0f);
+        glm::mat4 proj = glm::ortho(0.0f, (float) Application::GetWindowWidth(), (float) Application::GetWindowHeight(), 0.0f);
 
-        float x = (float) appContext->width - frameRate.texWidth - 10;
+        float x = (float) Application::GetWindowWidth() - frameRate.texWidth - 10;
         float y = 10.0f;
 
         glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(x, y, 0.f));

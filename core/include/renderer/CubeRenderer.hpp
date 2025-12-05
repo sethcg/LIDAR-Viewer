@@ -82,7 +82,7 @@ namespace CubeRenderer {
 
     void UpdateInstanceBuffers();
 
-    void Render(Application::AppContext* appContext);
+    void Render();
 
     void Shutdown();
 
