@@ -15,13 +15,14 @@ namespace Camera {
 
     // CAMERA ROTATION
     static float angle = 0.0f;
-    static float rotationSpeed = 0.5f;
+    static float rotationSpeed = 30.0f;
 
     // CAMERA ZOOM
     static float zoom = 1.0f;
-    static float zoomSpeed = 1.0f;
-    // static float minZoom = 0.2f;
-    // static float maxZoom = 5.0f;
+    static float targetZoom = 1.0f;
+    static float zoomSpeed = 5.0f;
+    static float minZoom = 0.2f;
+    static float maxZoom = 5.0f;
 
     void RecalculateBounds() {
         const auto& cubes = CubeRenderer::GetCubes();
@@ -59,16 +60,21 @@ namespace Camera {
         );
     }
 
-    void Update() {
+    void Update(float deltaTime) {
+        if (deltaTime > 0.1f) deltaTime = 0.1f;
+
         // CAMERA ORBITS AROUND THE CENTER
-        float deltaTime = 1.0f / 60.0f;
         angle += rotationSpeed * deltaTime;
 
-        float dist = sceneRadius / zoom;
+        // SMOOTH ZOOM
+        zoom = glm::mix(zoom, targetZoom, deltaTime * zoomSpeed);
+
+        float radians = glm::radians(angle);
+        float distance = sceneRadius / zoom;
 
         glm::vec3 camPos;
-        camPos.x = sceneCenter.x + dist * cos(glm::radians(angle));
-        camPos.y = sceneCenter.y + dist * sin(glm::radians(angle));
+        camPos.x = sceneCenter.x + distance * cos(radians);
+        camPos.y = sceneCenter.y + distance * sin(radians);
         camPos.z = sceneCenter.z + (sceneDist * 0.5f) / zoom;
 
         view = glm::lookAt(camPos, sceneCenter, glm::vec3(0, 0, 1));
@@ -79,6 +85,10 @@ namespace Camera {
     const glm::mat4& GetProjection() { return projection; }
 
     float& GetRotationSpeed() { return rotationSpeed; }
+
     float& GetZoom() { return zoom; }
+    float& GetMinZoom() { return minZoom; }
+    float& GetMaxZoom() { return maxZoom; }
+    float& GetTargetZoom() { return targetZoom; }
 
 }

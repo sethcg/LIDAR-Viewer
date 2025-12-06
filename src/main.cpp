@@ -83,11 +83,12 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
     switch (event->type) {
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
-        case SDL_EVENT_WINDOW_RESIZED:
-            int width, height;
-            SDL_GetWindowSize(appContext->window, &width, &height);
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+            int width = event->window.data1;
+            int height = event->window.data2;
             Application::GetWindowWidth() = width;
             Application::GetWindowHeight() = height;
+            glViewport(0, 0, width, height);
             break;
     }
 
@@ -98,6 +99,12 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
     AppContext* appContext = (AppContext*) appstate;
+
+    // CALCULATE DELTA TIME
+    static uint64_t lastTime = SDL_GetPerformanceCounter();
+    uint64_t currentTime = SDL_GetPerformanceCounter();
+    float deltaTime = (float)(currentTime - lastTime) / SDL_GetPerformanceFrequency();
+    lastTime = currentTime;
 
     // INITIALIZE IMGUI FRAME
     ImGui_ImplOpenGL3_NewFrame();
@@ -157,15 +164,15 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     ImGui::PopStyleColor();
 
     // CAMERA ROTATION SPEED
-    ImGui::SliderFloat("Rotation Speed", &Camera::GetRotationSpeed(), 0.0f, 5.0f);
+    ImGui::SliderFloat("Rotation Speed", &Camera::GetRotationSpeed(), 0.0f, 300.0f);
 
     // CAMERA ZOOM
-    ImGui::SliderFloat("Zoom", &Camera::GetZoom(), 0.2f, 5.0f);
+    ImGui::SliderFloat("Zoom", &Camera::GetTargetZoom(), Camera::GetMinZoom(), Camera::GetMaxZoom());
 
     ImGui::End();
     ImGui::Render();
 
-    Camera::Update();
+    Camera::Update(deltaTime);
 
     // CUBE RENDER
     CubeRenderer::UpdateInstanceBuffers();
@@ -176,8 +183,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     TextRenderer::Render();
 
     // IMGUI RENDER
-    appContext->imgui_data = ImGui::GetDrawData();
-    ImGui_ImplOpenGL3_RenderDrawData(appContext->imgui_data);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     SDL_GL_SwapWindow(appContext->window);
     return SDL_APP_CONTINUE;

@@ -22,8 +22,7 @@ namespace Application {
 
     struct AppContext {
         SDL_Window* window;             
-        ImDrawData* imgui_data;
-        SDL_GLContext opengl_context;   // OPENGL CONTEXT
+        SDL_GLContext opengl_context;
         
         std::vector<Data::Point> points;
 
@@ -31,7 +30,6 @@ namespace Application {
 
         AppContext() {
             window = nullptr;
-            imgui_data = nullptr;     
             opengl_context = nullptr;
 
             filepath = "";
