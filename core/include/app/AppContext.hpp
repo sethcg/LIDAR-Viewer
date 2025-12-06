@@ -1,11 +1,9 @@
 #ifndef APP_CONTEXT_H
 #define APP_CONTEXT_H
 
+#include <memory>
 #include <vector>
 #include <string>
-
-#include <SDL3/SDL.h>
-#include <imgui.h>
 
 #include <Point.hpp>
 
@@ -21,28 +19,13 @@
 namespace Application {
 
     struct AppContext {
-        SDL_Window* window;             
-        SDL_GLContext opengl_context;
-        
-        std::vector<Data::Point> points;
-
         std::string filepath;
+        std::unique_ptr<std::vector<Data::Point>> points;
 
         AppContext() {
-            window = nullptr;
-            opengl_context = nullptr;
-
             filepath = "";
         }
     };
-
-    SDL_AppResult CreateWindow(AppContext* appContext, const char* title);
-
-    SDL_AppResult CreateGLContext(AppContext* appContext, bool enableVsync);
-
-    // ACCESSOR METHODS
-    int& GetWindowWidth();
-    int& GetWindowHeight();
 
 }
 

@@ -1,4 +1,6 @@
-#include <SDL3/SDL.h>
+#include <vector>
+#include <string>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -96,8 +98,7 @@ namespace CubeRenderer {
         stateChanged = false;
     }
 
-    void Render() {
-        glViewport(0, 0, Application::GetWindowWidth(), Application::GetWindowHeight());
+    void Render(glm::mat4 view, glm::mat4 projection) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -112,7 +113,7 @@ namespace CubeRenderer {
         glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalColor));
         glUniform1f(uGlobalScaleLocation, globalScale);
 
-        glm::mat4 viewProjection = Camera::GetProjection() * Camera::GetView();
+        glm::mat4 viewProjection = projection * view;
         glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
 
         glDrawArraysInstanced(GL_TRIANGLES, 0, 36, (GLsizei)cubes.size());

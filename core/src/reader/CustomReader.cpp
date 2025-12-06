@@ -1,16 +1,15 @@
-#include <algorithm>
 #include <chrono>
-#include <iostream>
-#include <vector>
+#include <cstdint>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include <SDL3/SDL.h>
-#include <pdal/pdal.hpp>
 #include <pdal/StageFactory.hpp>
-#include <pdal/io/LasReader.hpp>
-#include <pdal/filters/DecimationFilter.hpp>
 #include <pdal/PointTable.hpp>
 #include <pdal/PointView.hpp>
+#include <pdal/Options.hpp>
+#include <pdal/Dimension.hpp>
 
 #include <CustomReader.hpp>
 #include <Point.hpp>
@@ -19,10 +18,11 @@ namespace CustomReader {
 
     void GetPointData(
         std::string filepath, 
-        std::vector<Data::Point>* points,
+        std::unique_ptr<std::vector<Data::Point>>& points,
         uint32_t decimationStep) 
     {
-        if (!points) return;
+        // ALLOCATE IF EMPTY
+        if (!points) points = std::make_unique<std::vector<Data::Point>>();
 
         auto start = std::chrono::high_resolution_clock::now();
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "READING FILE: %s", filepath.c_str());

@@ -1,8 +1,15 @@
+#include <string>
+#include <cstdio>
+
+#include <glad/glad.h>
+#include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <TextRenderer.hpp>
 #include <RendererHelper.hpp>
+#include <TextRenderer.hpp>
 
 namespace TextRenderer {
 
@@ -95,7 +102,7 @@ namespace TextRenderer {
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "FPS: %.1f", frameRate.fps);
 
-        SDL_Color white = {255, 255, 255, SDL_ALPHA_OPAQUE};
+        SDL_Color white = {255, 255, 255, 255};
         SDL_Surface* surface = TTF_RenderText_Blended(textFont, buffer, 0, white);
         if (!surface) return;
 
@@ -112,7 +119,7 @@ namespace TextRenderer {
         SDL_DestroySurface(convertedSurface);
     }
 
-    void Render() {
+    void Render(int windowWidth, int windowHeight) {
         if (frameRate.texWidth == 0 || frameRate.texHeight == 0) return;
 
         glUseProgram(shaderProgram);
@@ -125,9 +132,9 @@ namespace TextRenderer {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glm::mat4 proj = glm::ortho(0.0f, (float) Application::GetWindowWidth(), (float) Application::GetWindowHeight(), 0.0f);
+        glm::mat4 proj = glm::ortho(0.0f, (float) windowWidth, (float) windowHeight, 0.0f);
 
-        float x = (float) Application::GetWindowWidth() - frameRate.texWidth - 10;
+        float x = (float) windowWidth - frameRate.texWidth - 10;
         float y = 10.0f;
 
         glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(x, y, 0.f));

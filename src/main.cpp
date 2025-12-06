@@ -1,206 +1,28 @@
-#define SDL_MAIN_USE_CALLBACKS 1 // USE CALLBACKS INSTEAD OF THE "main()" FUNCTION
+#define SDL_MAIN_USE_CALLBACKS 1
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <SDL3_ttf/SDL_ttf.h>
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_opengl3.h>
 
-#include <AppContext.hpp>
-#include <UserInterface.hpp>
-#include <Camera.hpp>
-#include <CubeRenderer.hpp>
-#include <CustomReader.hpp>
-#include <Point.hpp>
-#include <TextRenderer.hpp>
+#include <App.hpp>
 
 using namespace Application;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-
-    SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_DEBUG);
-
-    // SETUP APP STATE
-    AppContext* appContext = new AppContext();
-    if (appContext == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-    *appstate = appContext;
-
-    // SETUP WINDOW
-    if(CreateWindow(appContext, "LIDAR Viewer")) {
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-
-    // SETUP OPENGL WITH THE OPTION TO DISABLE VSYNC (FPS LIMIT)
-    if(CreateGLContext(appContext, false)) {
-        SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    };
-
-    // INITIALIZE TEXT FONT
-    if (!TTF_Init()) SDL_Log("ERROR INITIALIZING SDL_TTF: %s", SDL_GetError());
-    TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18.0f);
-    if (!textFont) {
-        SDL_Log("TTF_OPENFONT FAILED: %s", SDL_GetError());
-    }
-
-    Camera::Init();
-    CubeRenderer::Init();
-    TextRenderer::Init(textFont);
-    
-    // SETUP IMGUI
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-    // SETUP IMGUI WINDOW/COLOR THEME
-    UserInterface::SetCustomTheme();
-
-    // INITIALIZE BACKENDS
-    ImGui_ImplSDL3_InitForOpenGL(appContext->window, appContext->opengl_context);
-    ImGui_ImplOpenGL3_Init(GLSL_VERSION);
-
-    return SDL_APP_CONTINUE;
+    App* app = new App();
+    *appstate = app;
+    return app->Init(argc, argv);
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
-    AppContext* appContext = (AppContext*) appstate;
-
-    switch (event->type) {
-        case SDL_EVENT_QUIT:
-            return SDL_APP_SUCCESS;
-        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            int width = event->window.data1;
-            int height = event->window.data2;
-            Application::GetWindowWidth() = width;
-            Application::GetWindowHeight() = height;
-            glViewport(0, 0, width, height);
-            break;
-    }
-
-    ImGui_ImplSDL3_ProcessEvent(event);
-
-    return SDL_APP_CONTINUE;
+    return static_cast<App*>(appstate)->ProcessEvent(event);
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
-    AppContext* appContext = (AppContext*) appstate;
-
-    // CALCULATE DELTA TIME
-    static uint64_t lastTime = SDL_GetPerformanceCounter();
-    uint64_t currentTime = SDL_GetPerformanceCounter();
-    float deltaTime = (float)(currentTime - lastTime) / SDL_GetPerformanceFrequency();
-    lastTime = currentTime;
-
-    // INITIALIZE IMGUI FRAME
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-    
-    ImVec2 minSize(MINIMUM_WINDOW_WIDTH / 2, MINIMUM_WINDOW_HEIGHT / 2);
-    ImVec2 maxSize(FLT_MAX, FLT_MAX);
-    ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
-    ImGui::Begin("##panel");
-
-    // FILE SELECTION
-    UserInterface::FileSelectButton(appContext, "Select File", ImVec2(0, 28),
-        [](AppContext* appContext, std::string filepath){
-            appContext->filepath = filepath;
-            
-            // READ LAZ FILE DATA
-            const uint32_t decimationStep = 1;
-            CustomReader::GetPointData(
-                appContext->filepath,
-                &appContext->points,
-                decimationStep
-            );
-            
-            // ADD CUBE FOR EACH POINT
-            CubeRenderer::Clear();
-            for (size_t i = 0; i < appContext->points.size(); ++i) {
-                const Data::Point& point = appContext->points[i];
-                CubeRenderer::Add(CubeRenderer::Cube(
-                    glm::vec3(point.x, point.y, point.z), 
-                    Data::ColorMap(point.normalized)
-                ));
-            }
-            Camera::RecalculateBounds();
-            CubeRenderer::SetStateChanged(true);
-        });
-    ImGui::SameLine(0.0f, 10.0f);
-    UserInterface::FileSelectLabel(appContext->filepath.c_str(), ImVec2(0, 28));
-
-    // CUBE SETTINGS TITLE
-    ImGui::Spacing();
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-    ImGui::Text("Cube");
-    ImGui::PopStyleColor();
-
-    // GLOBAL COLOR (TINT)
-    ImGui::ColorEdit3("Global Color", glm::value_ptr(CubeRenderer::GetGlobalColor()));
-
-    // GLOBAL SCALE
-    ImGui::SliderFloat("Global Scale", &CubeRenderer::GetGlobalScale(), 0.05f, 1.0f);
-
-    // CAMERA SETTINGS TITLE
-    ImGui::Spacing();
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-    ImGui::Text("Camera");
-    ImGui::PopStyleColor();
-
-    // CAMERA ROTATION SPEED
-    ImGui::SliderFloat("Rotation Speed", &Camera::GetRotationSpeed(), 0.0f, 300.0f);
-
-    // CAMERA ZOOM
-    ImGui::SliderFloat("Zoom", &Camera::GetTargetZoom(), Camera::GetMinZoom(), Camera::GetMaxZoom());
-
-    ImGui::End();
-    ImGui::Render();
-
-    Camera::Update(deltaTime);
-
-    // CUBE RENDER
-    CubeRenderer::UpdateInstanceBuffers();
-    CubeRenderer::Render();
-
-    // FPS RENDER
-    TextRenderer::UpdateFPS();
-    TextRenderer::Render();
-
-    // IMGUI RENDER
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    SDL_GL_SwapWindow(appContext->window);
-    return SDL_APP_CONTINUE;
+    return static_cast<App*>(appstate)->Frame();
 }
 
-void SDL_AppQuit(void* appstate, SDL_AppResult result) {
-    AppContext* appContext = (AppContext*) appstate;
-
-    TextRenderer::Shutdown();
-    CubeRenderer::Shutdown();
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-
-    SDL_GL_DestroyContext(appContext->opengl_context);
-    SDL_DestroyWindow(appContext->window);
-    TTF_Quit();
-    SDL_Quit();
+void SDL_AppQuit(void* appstate, SDL_AppResult res) {
+    App* app = static_cast<App*>(appstate);
+    app->Shutdown();
+    delete app;
 }

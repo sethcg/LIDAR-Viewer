@@ -2,14 +2,13 @@
 #define CUBE_RENDERER_H
 
 #include <vector>
+#include <string>
 
-#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <AppContext.hpp>
-#include <Camera.hpp>
+#include <RendererHelper.hpp>
 
 namespace CubeRenderer {
 
@@ -82,7 +81,7 @@ namespace CubeRenderer {
 
     void UpdateInstanceBuffers();
 
-    void Render();
+    void Render(glm::mat4 view, glm::mat4 projection);
 
     void Shutdown();
 
