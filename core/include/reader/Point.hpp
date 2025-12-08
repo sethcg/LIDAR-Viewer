@@ -1,5 +1,4 @@
-#ifndef POINT_DATA_H
-#define POINT_DATA_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -24,5 +23,3 @@ namespace Data {
     glm::vec3 ColorMap(float normalizedValue);
     
 }
-
-#endif

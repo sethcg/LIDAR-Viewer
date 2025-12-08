@@ -1,5 +1,4 @@
-#ifndef CAMERA_H
-#define CAMERA_H
+#pragma once
 
 #include <vector>
 #include <cmath>
@@ -53,6 +52,3 @@ class Camera {
         float minZoom = 0.2f;
         float maxZoom = 5.0f;
 };
-
-
-#endif

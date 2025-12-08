@@ -54,16 +54,16 @@ namespace UserInterface {
         colors[ImGuiCol_FrameBgActive] = ImVec4(0.40f, 0.45f, 0.50f, 1.0f);
     }
 
-    void RenderMainPanel(Camera* camera, Application::AppContext* appContext) {
+    void RenderMainPanel(Application::AppContext* appContext) {
         ImVec2 minSize(float(MINIMUM_WINDOW_WIDTH) / 2.0f, float(MINIMUM_WINDOW_HEIGHT) / 2.0f);
         ImVec2 maxSize(FLT_MAX, FLT_MAX);
         ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
         ImGui::Begin("##panel");
 
-        DrawFileSelection(camera, appContext);
+        DrawFileSelection(appContext);
         DrawCubeSettings();
-        DrawCameraSettings(camera);
+        DrawCameraSettings(appContext);
 
         ImGui::End();
     }
@@ -83,7 +83,7 @@ namespace UserInterface {
 
     }
 
-    void DrawCameraSettings(Camera* camera) {
+    void DrawCameraSettings(Application::AppContext* appContext) {
         // TITLE
         ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
@@ -91,20 +91,21 @@ namespace UserInterface {
         ImGui::PopStyleColor();
 
         // CAMERA ROTATION SPEED
-        float rotationSpeed = camera->GetRotationSpeed();
-        if (ImGui::SliderFloat("Rotation Speed", &rotationSpeed, 0.0f, 300.0f)) {
-            camera->SetRotationSpeed(rotationSpeed);
-        }
+        ImGui::SliderFloat("Rotation Speed", 
+            &appContext->camera->GetRotationSpeed(), 
+            0.0f, 
+            300.0f
+        );
 
         // CAMERA ZOOM
-        float targetZoom = camera->GetTargetZoom();
-        if(ImGui::SliderFloat("Zoom", &targetZoom, camera->GetMinZoom(), camera->GetMaxZoom())) {
-            camera->SetTargetZoom(targetZoom);
-        };
+        ImGui::SliderFloat("Zoom", 
+            &appContext->camera->GetTargetZoom(), 
+            appContext->camera->GetMinZoom(), 
+            appContext->camera->GetMaxZoom());
 
     }
 
-    void DrawFileSelection(Camera* camera, Application::AppContext* appContext) {
+    void DrawFileSelection(Application::AppContext* appContext) {
         if (ImGui::Button("Select File", ImVec2(0.0f, 28.0f))) {
             const char* filters[] = { "*.las", "*.laz" };
             const char* selected = tinyfd_openFileDialog(
@@ -126,7 +127,7 @@ namespace UserInterface {
                 CubeRenderer::UpdateBufferSize(appContext->points->size());
                 CubeRenderer::AddCubes(*appContext->points);
                 appContext->points->clear();
-                camera->RecalculateBounds();
+                appContext->camera->RecalculateBounds();
             } else {
                 return;
             }

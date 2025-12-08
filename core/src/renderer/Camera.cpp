@@ -20,58 +20,61 @@ Camera::Camera(int windowWidth, int windowHeight) {
 void Camera::RecalculateBounds() {
     const auto& cubes = CubeRenderer::GetCubes();
     if (cubes.empty()) {
-        sceneCenter = glm::vec3(0, 0, 0);
-        sceneDistance = 5.0f;
+        sceneCenter = glm::vec3(0.0f);
         sceneRadius = 5.0f;
         return;
     }
 
-    glm::vec3 minDist(FLT_MAX);
+    glm::vec3 minDist( FLT_MAX);
     glm::vec3 maxDist(-FLT_MAX);
 
     for (const auto& cube : cubes) {
         float scale = cube.scale * CubeRenderer::GetGlobalScale();
         glm::vec3 offset(scale);
-
-        // COMPONENT-WISE MIN/MAX (USING "glm::min/max" WAS THROWING ERRORS)
-        minDist.x = std::fmin(minDist.x, cube.position.x - offset.x);
-        minDist.y = std::fmin(minDist.y, cube.position.y - offset.y);
-        minDist.z = std::fmin(minDist.z, cube.position.z - offset.z);
-
-        maxDist.x = std::fmax(maxDist.x, cube.position.x + offset.x);
-        maxDist.y = std::fmax(maxDist.y, cube.position.y + offset.y);
-        maxDist.z = std::fmax(maxDist.z, cube.position.z + offset.z);
+        glm::vec3 minP = cube.position - offset;
+        glm::vec3 maxP = cube.position + offset;
+        minDist = glm::min(minDist, minP);
+        maxDist = glm::max(maxDist, maxP);
     }
 
+    // CENTER OF BOUNDING BOX
     sceneCenter = 0.5f * (minDist + maxDist);
 
-    float extent = std::fmax(maxDist.x - minDist.x, maxDist.y - minDist.y) * 0.5f;
-    float fov = 45.0f;
-    sceneDistance = extent / tan(glm::radians(fov * 0.5f));
-    sceneRadius = sceneDistance * 1.3f;
+    glm::vec3 size = maxDist - minDist;
+    sceneRadius = glm::length(size) * 0.5f;
 }
 
 void Camera::Resize(int windowWidth, int windowHeight) {
     glViewport(0, 0, windowWidth, windowHeight);
-    projection = glm::perspective(glm::radians(45.0f), float(windowWidth) / windowHeight, 0.1f, 1000.0f);
+
+    projection = glm::perspective(
+        glm::radians(45.0f),
+        float(windowWidth) / float(windowHeight),
+        0.1f,
+        100000.0f   // LARGE "RENDER DISTANCE"
+    );
 }
 
 void Camera::Update(float deltaTime) {
-    if (deltaTime > 0.1f) deltaTime = 0.1f;
+    if (deltaTime > 0.1f) {
+        deltaTime = 0.1f;
+    }
 
-    // CAMERA ORBITS AROUND THE CENTER
-    angle += rotationSpeed * deltaTime;
-
-    // SMOOTH ZOOM
+    // SMOOTH ZOOM TRANSITION
     zoom = glm::mix(zoom, targetZoom, deltaTime * zoomSpeed);
 
-    float radians = glm::radians(angle);
-    float distance = sceneRadius / zoom;
+    // ORBIT ROTATION
+    angle += rotationSpeed * deltaTime;
+
+    float theta = glm::radians(angle);     // HORIZONTAL ORBIT
+    float phi = glm::radians(35.0f);     // CONSTANT ELEVATION
+
+    float radius = sceneRadius / zoom;
 
     glm::vec3 camPos;
-    camPos.x = sceneCenter.x + distance * cos(radians);
-    camPos.y = sceneCenter.y + distance * sin(radians);
-    camPos.z = sceneCenter.z + (sceneDistance * 0.5f) / zoom;
+    camPos.x = sceneCenter.x + radius * cos(phi) * cos(theta);
+    camPos.y = sceneCenter.y + radius * cos(phi) * sin(theta);
+    camPos.z = sceneCenter.z + radius * sin(phi);
 
     view = glm::lookAt(camPos, sceneCenter, glm::vec3(0, 0, 1));
 }

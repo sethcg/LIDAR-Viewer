@@ -1,11 +1,11 @@
-#ifndef APP_CONTEXT_H
-#define APP_CONTEXT_H
+#pragma once
 
 #include <memory>
 #include <vector>
 #include <string>
 
 #include <Point.hpp>
+#include <Camera.hpp>
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -21,12 +21,13 @@ namespace Application {
     struct AppContext {
         std::string filepath;
         std::unique_ptr<std::vector<Data::Point>> points;
+        
+        std::unique_ptr<Camera> camera;
 
         AppContext() {
             filepath = "";
+            points = std::make_unique<std::vector<Data::Point>>();
         }
     };
 
 }
-
-#endif

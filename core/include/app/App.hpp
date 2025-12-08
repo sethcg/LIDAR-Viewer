@@ -1,5 +1,4 @@
-#ifndef APP_H
-#define APP_H
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -13,43 +12,47 @@
 #include <imgui_impl_opengl3.h>
 
 #include <AppContext.hpp>
-#include <Camera.hpp>
-#include <CubeRenderer.hpp>
-#include <CustomReader.hpp>
-#include <TextRenderer.hpp>
-#include <UserInterface.hpp>
-#include <Point.hpp>
 
 namespace Application {
 
     class App {
         public:
+            AppContext appContext;
+
             SDL_AppResult Init(int argc, char** argv);
             SDL_AppResult ProcessEvent(SDL_Event* event);
             SDL_AppResult Frame();
             void Shutdown();
+            
+            // SETUP APP INSTANCE (SINGLETON)
+            static App& Instance() {
+                static App instance;
+                return instance;
+            }
+
+            // PREVENT COPYING/DELETING OPERATIONS (SINGLETON)
+            App(const App&) = delete;
+            App(App&&) = delete;
+            App& operator=(const App&) = delete;
+            App& operator=(App&&) = delete;
 
         private:
+            // PREVENT CONSTRUCT/DESTRUCTION (SINGLETON)
+            App() = default;
+            ~App() = default;
+
             bool CreateSDLWindow(const char* title);
             bool CreateGLContext(bool enableVsync);
             void RenderScene(float deltaTime);
 
-        public:
-            AppContext appContext;
-
-        private:
             SDL_Window* window = nullptr;
             SDL_GLContext glContext = nullptr;
-
-            std::unique_ptr<Camera> camera;
 
             int width = WINDOW_WIDTH;
             int height = WINDOW_HEIGHT;
 
-            float deltaTime;
+            float deltaTime = 0.0f;
             uint64_t lastTime = 0;
     };
 
 }
-
-#endif

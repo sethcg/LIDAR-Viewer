@@ -16,7 +16,6 @@
 #include <CustomReader.hpp>
 #include <TextRenderer.hpp>
 #include <UserInterface.hpp>
-#include <Point.hpp>
 
 namespace Application {
 
@@ -28,35 +27,27 @@ namespace Application {
         SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_DEBUG);
 
         window = SDL_CreateWindow(title, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS); 
-        if (!window) {
-            SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "Error %s", SDL_GetError());
-            return false;
-        }
-        return true;
+        return window != nullptr;
     }
 
     bool App::CreateGLContext(bool enableVsync) {
         glContext = SDL_GL_CreateContext(window);
-        SDL_GL_SetSwapInterval((enableVsync ? 1 : 0));
-        if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-            SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, "%s", "Failed to load GLAD\n");
-            return false;
-        }
-        return true;
+        SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
+        return gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress);
     }
 
     SDL_AppResult App::Init(int argc, char** argv) {
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) return SDL_APP_FAILURE;
-        if (!CreateSDLWindow("LiDAR Viewer")) return SDL_APP_FAILURE;
+        if (!CreateSDLWindow("LIDAR Viewer")) return SDL_APP_FAILURE;
         if (!CreateGLContext(false)) return SDL_APP_FAILURE;
 
-        camera = std::make_unique<Camera>(width, height);
+        appContext.camera = std::make_unique<Camera>(width, height);
         CubeRenderer::Init();
 
         TTF_Init();
         TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18);
         TextRenderer::Init(textFont);
-        
+
         // INITIALIZE IMGUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -76,7 +67,7 @@ namespace Application {
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                 width = event->window.data1;
                 height = event->window.data2;
-                camera->Resize(width, height);
+                appContext.camera->Resize(width, height);
                 break;
         }
 
@@ -85,14 +76,17 @@ namespace Application {
     }
 
     void App::RenderScene(float deltaTime) {
-        if (camera) camera->Update(deltaTime);
+        appContext.camera->Update(deltaTime);
 
-        CubeRenderer::Render(camera->GetView(), camera->GetProjection());
+        CubeRenderer::Render(
+            appContext.camera->GetView(),
+            appContext.camera->GetProjection()
+        );
 
         TextRenderer::UpdateFPS();
         TextRenderer::Render(width, height);
     }
-  
+
     SDL_AppResult App::Frame() {
         // UPDATE DELTA TIME
         uint64_t currentTime = SDL_GetPerformanceCounter();
@@ -103,8 +97,8 @@ namespace Application {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // RENDER GUI (IMGUI SETTINGS PANEL)
-        UserInterface::RenderMainPanel(camera.get(), &appContext);
+        // RENDER GUI
+        UserInterface::RenderMainPanel(&appContext);
 
         // RENDER SCENE (CAMERA, CUBE, TEXT, ...)
         RenderScene(deltaTime);

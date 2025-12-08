@@ -1,5 +1,4 @@
-#ifndef CUSTOM_READER_H
-#define CUSTOM_READER_H
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -26,5 +25,3 @@ namespace CustomReader {
     );
 
 }
-
-#endif

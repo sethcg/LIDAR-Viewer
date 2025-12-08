@@ -1,5 +1,4 @@
-#ifndef USER_INTERFACE_HELPER_H
-#define USER_INTERFACE_HELPER_H
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -23,16 +22,14 @@ namespace UserInterface {
 
     void SetCustomTheme();
 
-    void RenderMainPanel(Camera* camera, Application::AppContext* appContext);
+    void RenderMainPanel(Application::AppContext* appContext);
 
     void DrawCubeSettings();
 
-    void DrawCameraSettings(Camera* camera);
+    void DrawCameraSettings(Application::AppContext* appContext);
 
-    void DrawFileSelection(Camera* camera, Application::AppContext* appContext);
+    void DrawFileSelection(Application::AppContext* appContext);
 
     void FileSelectLabel(const char* text, ImVec2 size, ImVec2 padding);
 
 }
-
-#endif
