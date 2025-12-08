@@ -13,6 +13,7 @@
 #include <App.hpp>
 #include <AppContext.hpp>
 #include <Camera.hpp>
+#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
 #include <UserInterface.hpp>
@@ -120,17 +121,12 @@ namespace UserInterface {
                 std::string str_filepath(selected);
                 CustomReader::GetPointData(str_filepath, appContext->points, decimationStep);
                 
-                // ADD CUBE FOR EACH POINT
+                // CLEAR, THEN ADD EACH CUBE
                 CubeRenderer::Clear();
-                for (size_t i = 0; i < appContext->points->size(); ++i) {
-                    const Data::Point& point = (*appContext->points)[i];
-                    CubeRenderer::Add(CubeRenderer::Cube(
-                        glm::vec3(point.x, point.y, point.z), 
-                        Data::ColorMap(point.normalized)
-                    ));
-                }
+                CubeRenderer::UpdateBufferSize(appContext->points->size());
+                CubeRenderer::AddCubes(*appContext->points);
+                appContext->points->clear();
                 camera->RecalculateBounds();
-                CubeRenderer::SetStateChanged(true);
             } else {
                 return;
             }

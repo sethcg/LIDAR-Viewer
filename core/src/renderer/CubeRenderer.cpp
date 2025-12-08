@@ -5,16 +5,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
+#include <Point.hpp>
 
 namespace CubeRenderer {
 
-    static bool stateChanged = true;
     static float globalScale = 0.5f;
     static glm::vec3 globalColor = glm::vec3(1.0f);
 
-    static std::vector<Cube> cubes;
+    static std::vector<Data::Cube> cubes;
 
     static GLuint vao = 0;
     static GLuint vbo = 0;
@@ -26,6 +27,7 @@ namespace CubeRenderer {
     static GLint uGlobalColorLocation = -1;
     static GLint uGlobalScaleLocation = -1;
 
+    static size_t instanceCount = 0;
     static std::vector<glm::mat4> instanceModels;
     static std::vector<glm::vec3> instanceColors;
 
@@ -76,37 +78,25 @@ namespace CubeRenderer {
         glEnable(GL_DEPTH_TEST);
     }
 
-    void UpdateInstanceBuffers() {
-        if (cubes.empty()) return;
-        if(!stateChanged) return;
+    void UpdateBufferSize(int maxInstanceCount) {
+        instanceCount = 0;
 
-        std::vector<glm::mat4> models(cubes.size());
-        std::vector<glm::vec3> colors(cubes.size());
-
-        for (size_t i = 0; i < cubes.size(); ++i) {
-            models[i] = glm::translate(glm::mat4(1.0f), cubes[i].position);
-            colors[i] = cubes[i].color;
-        }
+        instanceModels.resize(maxInstanceCount, glm::mat4(1.0f));
+        instanceColors.resize(maxInstanceCount, glm::vec3(1.0f));
 
         glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, maxInstanceCount * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
 
         glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-        glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(glm::vec3), colors.data(), GL_STATIC_DRAW);
-
-        // CHANGE STATE (AVOIDS UPDATING BUFFERS EACH RENDER FRAME)
-        stateChanged = false;
+        glBufferData(GL_ARRAY_BUFFER, maxInstanceCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
     }
 
     void Render(glm::mat4 view, glm::mat4 projection) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (cubes.empty()) return;
+        if (instanceCount == 0) return;
 
-        // CALLED IN MAIN WHEN STATE CHANGES
-        // UpdateInstanceBuffers();
-        
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
 
@@ -116,10 +106,75 @@ namespace CubeRenderer {
         glm::mat4 viewProjection = projection * view;
         glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
 
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 36, (GLsizei)cubes.size());
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 36, (GLsizei)instanceCount);
 
         glBindVertexArray(0);
         glUseProgram(0);
+    }
+
+    void AddCubes(const std::vector<Data::Point>& points) {
+        size_t pointCount = points.size();
+        if (pointCount == 0) return;
+
+        // RESERVE ADDITIONAL SPACE FOR CUBES/INSTANCE DATA
+        cubes.reserve(cubes.size() + pointCount);
+        if (instanceModels.size() < instanceCount + pointCount) {
+            instanceModels.resize(instanceCount + pointCount);
+        }
+        if (instanceColors.size() < instanceCount + pointCount) {
+            instanceColors.resize(instanceCount + pointCount);
+        }
+
+        glm::mat4 modelMatrix(1.0f);
+        for (size_t i = 0; i < pointCount; ++i) {
+            const Data::Point& point = points[i];
+
+            // PRECOMPUTE CUBE POSITION AND COLOR
+            glm::vec3 position = glm::vec3(point.x, point.y, point.z);
+            glm::vec3 color = Data::ColorMap(point.normalized);
+            
+            // ADD CUBE
+            cubes.emplace_back(position, color);
+
+            // DIRECTLY SET TRANSLATION IN THE MATRIX MODEL (EFFICIENT)
+            modelMatrix[3] = glm::vec4(position, 1.0f);
+            instanceModels[instanceCount] = modelMatrix;
+            instanceColors[instanceCount] = color;
+            instanceCount++;
+        }
+
+        // UPDATE GPU BUFFERS FOR ALL INSTANCES
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::mat4), instanceModels.data());
+
+        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
+    }
+
+    void UpdateCube(size_t index, const Data::Point& point) {
+        if (index >= instanceCount) return; // INDEX OUT OF BOUNDS
+
+        glm::vec3 position = glm::vec3(point.x, point.y, point.z);
+        glm::vec3 color = Data::ColorMap(point.normalized);
+        cubes[index] = Data::Cube(position, color);
+
+        // UPDATE INSTANCE ARRAYS
+        instanceModels[index] = glm::translate(glm::mat4(1.0f), position);
+        instanceColors[index] = color;
+
+        // UPDATE GPU BUFFERS FOR SINGLE INSTANCE
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::mat4), sizeof(glm::mat4), &instanceModels[index]);
+
+        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::vec3), sizeof(glm::vec3), &instanceColors[index]);
+    }
+
+    void Clear() {
+        cubes.clear();
+        instanceModels.clear();
+        instanceColors.clear();
+        instanceCount = 0;
     }
 
     void Shutdown() {
@@ -130,18 +185,8 @@ namespace CubeRenderer {
         glDeleteProgram(shaderProgram);
     }
 
-    void Add(const Cube& cube) {
-        cubes.push_back(cube);
-    }
-
-    void Clear() {
-        cubes.clear();
-    }
-
     // ACCESSOR METHODS
-    const std::vector<Cube>& GetCubes() { return cubes; };
-
-    const void SetStateChanged(bool state) { stateChanged = state; };
+    const std::vector<Data::Cube>& GetCubes() { return cubes; };
 
     float& GetGlobalScale() { return globalScale; };
     glm::vec3& GetGlobalColor() { return globalColor; };

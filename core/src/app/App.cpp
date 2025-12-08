@@ -87,7 +87,6 @@ namespace Application {
     void App::RenderScene(float deltaTime) {
         if (camera) camera->Update(deltaTime);
 
-        CubeRenderer::UpdateInstanceBuffers();
         CubeRenderer::Render(camera->GetView(), camera->GetProjection());
 
         TextRenderer::UpdateFPS();

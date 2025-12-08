@@ -1,5 +1,4 @@
-#ifndef CUBE_RENDERER_H
-#define CUBE_RENDERER_H
+#pragma once
 
 #include <vector>
 #include <string>
@@ -8,22 +7,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <Cube.hpp>
+#include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
+#include <Point.hpp>
 
 namespace CubeRenderer {
-
-    struct Cube {
-        glm::vec3 position;
-        glm::vec3 color;
-
-        float scale;
-        
-        Cube(const glm::vec3& pos, glm::vec3 col) {
-            position = pos;
-            color = col;
-            scale = 1.0f;
-        }
-    };
 
     // TODO: PERFORMANCE IMPROVEMENT TO USE "glm::vec3" AND CUBE INDICES
     // AND ALLOW FOR USING "glDrawElements" INSTEAD OF "glDrawArrays"
@@ -79,23 +68,21 @@ namespace CubeRenderer {
 
     void Init();
 
-    void UpdateInstanceBuffers();
+    void UpdateBufferSize(int maxInstanceCount);
 
     void Render(glm::mat4 view, glm::mat4 projection);
 
-    void Shutdown();
+    void AddCubes(const std::vector<Data::Point>& points);
 
-    void Add(const Cube& cube);
+    void UpdateCube(size_t index, const Data::Point& point);
+
+    void Shutdown();
     
     void Clear();
 
     // ACCESSOR METHODS
-    const std::vector<Cube>& GetCubes();
-    
-    const void SetStateChanged(bool state);
+    const std::vector<Data::Cube>& GetCubes();
 
     float& GetGlobalScale();
     glm::vec3& GetGlobalColor();
 }
-
-#endif
