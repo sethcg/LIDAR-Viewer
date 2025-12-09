@@ -61,6 +61,7 @@ namespace Application {
     }
 
     SDL_AppResult App::ProcessEvent(SDL_Event* event) {
+        bool isFreeCamera = appContext.camera->GetFreeCamera();
         switch (event->type) {
             case SDL_EVENT_QUIT:
                 return SDL_APP_SUCCESS;
@@ -69,13 +70,25 @@ namespace Application {
                 height = event->window.data2;
                 appContext.camera->Resize(width, height);
                 break;
+            case SDL_EVENT_KEY_DOWN:
+                if (event->key.scancode == SDL_SCANCODE_F) {
+                    SDL_SetWindowRelativeMouseMode(window, !isFreeCamera);
+                    appContext.camera->GetFreeCamera() = !isFreeCamera;
+                }
+                break;
+            case SDL_EVENT_MOUSE_MOTION:
+                appContext.camera->ProcessMouseMotion(event->motion.xrel, event->motion.yrel);
+                break;
         }
 
-        ImGui_ImplSDL3_ProcessEvent(event);
+        // DISABLE GUI IN FREE CAMERA MODE
+        if(!isFreeCamera) ImGui_ImplSDL3_ProcessEvent(event);
+
         return SDL_APP_CONTINUE;
     }
 
     void App::RenderScene(float deltaTime) {
+        appContext.camera->ProcessKeyboard(deltaTime);
         appContext.camera->Update(deltaTime);
 
         CubeRenderer::Render(

@@ -21,17 +21,19 @@ class Camera {
         void Resize(int windowWidth, int windowHeight);
         void Update(float deltaTime);
 
+        void ProcessKeyboard(float deltaTime);
+        void ProcessMouseMotion(float xrel, float yrel);
+
         const glm::mat4& GetView() const { return view; }
         const glm::mat4& GetProjection() const { return projection; }
 
         float& GetRotationSpeed() { return rotationSpeed; }
-        void SetRotationSpeed(float value) { rotationSpeed = value; }
-        
         float& GetZoom() { return zoom; }
         float& GetTargetZoom() { return targetZoom; }
-        void SetTargetZoom(float value) { targetZoom = value; }
         float& GetMinZoom() { return minZoom; }
         float& GetMaxZoom() { return maxZoom; }
+
+        bool& GetFreeCamera() { return freeCamera; }
 
     private:
         glm::mat4 view;
@@ -41,14 +43,26 @@ class Camera {
         float sceneDistance = 5.0f;
         float sceneRadius = 5.0f;
 
-        // CAMERA ROTATION
+        // ORBIT CAMERA ROTATION
         float angle = 0.0f;
         float rotationSpeed = 30.0f;
 
-        // CAMERA ZOOM
+        // ORBIT CAMERA ZOOM
         float zoom = 1.0f;
         float targetZoom = 1.0f;
         float zoomSpeed = 5.0f;
         float minZoom = 0.2f;
         float maxZoom = 5.0f;
+
+        // FREE CAMERA
+        bool freeCamera = false;
+        glm::vec3 position = glm::vec3(0.0f, -10.0f, 5.0f);
+        glm::vec3 lookDirection = glm::vec3(0.0f, 1.0f, 0.0f);
+        glm::vec3 cameraUpDirection = glm::vec3(0.0f, 0.0f, 1.0f);
+
+        float horizontalAngle = 90.0f;      // YAW
+        float verticalAngle = 0.0f;         // PITCH
+        float movementSpeed = 20.0f;
+        float accelerationSpeed = 2.0f;
+        float mouseSensitivity = 0.1f;
 };
