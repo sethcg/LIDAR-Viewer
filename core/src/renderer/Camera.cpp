@@ -50,8 +50,8 @@ void Camera::Resize(int windowWidth, int windowHeight) {
     projection = glm::perspective(
         glm::radians(45.0f),
         float(windowWidth) / float(windowHeight),
-        0.1f,
-        100000.0f   // LARGE "RENDER DISTANCE"
+        0.1f,           // NEAR
+        100000.0f       // FAR
     );
 }
 

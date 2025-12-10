@@ -92,6 +92,7 @@ namespace Application {
         appContext.camera->Update(deltaTime);
 
         CubeRenderer::Render(
+            appContext.enableCulling,
             appContext.camera->GetView(),
             appContext.camera->GetProjection()
         );

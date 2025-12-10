@@ -103,6 +103,9 @@ namespace UserInterface {
             appContext->camera->GetMinZoom(), 
             appContext->camera->GetMaxZoom());
 
+        // ENABLE CULLING
+        ImGui::Checkbox("Enable back-face culling", &appContext->enableCulling);
+
     }
 
     void DrawFileSelection(Application::AppContext* appContext) {
@@ -116,11 +119,9 @@ namespace UserInterface {
                 0 // DO NOT ALLOW MULTIPLE SELECTIONS
             );
             if (selected) {
-                appContext->filepath = selected;
                 // READ LAZ FILE DATA
-                const uint32_t decimationStep = 1;
-                std::string str_filepath(selected);
-                CustomReader::GetPointData(str_filepath, appContext->points, decimationStep);
+                appContext->filepath = selected;
+                CustomReader::GetPointData(appContext->filepath, appContext->points);
                 
                 // CLEAR, THEN ADD EACH CUBE
                 CubeRenderer::Clear();

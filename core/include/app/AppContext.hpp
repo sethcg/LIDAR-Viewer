@@ -19,12 +19,14 @@
 namespace Application {
 
     struct AppContext {
+        bool enableCulling;
         std::string filepath;
         std::unique_ptr<std::vector<Data::Point>> points;
         
         std::unique_ptr<Camera> camera;
 
         AppContext() {
+            enableCulling = true;
             filepath = "";
             points = std::make_unique<std::vector<Data::Point>>();
         }
