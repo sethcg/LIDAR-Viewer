@@ -103,9 +103,6 @@ namespace UserInterface {
             appContext->camera->GetMinZoom(), 
             appContext->camera->GetMaxZoom());
 
-        // ENABLE CULLING
-        ImGui::Checkbox("Enable back-face culling", &appContext->enableCulling);
-
     }
 
     void DrawFileSelection(Application::AppContext* appContext) {

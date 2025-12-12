@@ -51,7 +51,6 @@ namespace Application {
         // INITIALIZE IMGUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        ImGui::GetIO().IniFilename = nullptr;
         UserInterface::SetCustomTheme();
 
         ImGui_ImplSDL3_InitForOpenGL(window, glContext);
@@ -93,7 +92,6 @@ namespace Application {
         appContext.camera->Update(deltaTime);
 
         CubeRenderer::Render(
-            appContext.enableCulling,
             appContext.camera->GetView(),
             appContext.camera->GetProjection()
         );

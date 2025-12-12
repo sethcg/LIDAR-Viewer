@@ -18,7 +18,7 @@ namespace CubeRenderer {
 
     void UpdateBufferSize(int maxInstanceCount);
 
-    void Render(bool enableCulling, glm::mat4 view, glm::mat4 projection);
+    void Render(glm::mat4 view, glm::mat4 projection);
 
     void AddCubes(const std::vector<Data::Point>& points);
 

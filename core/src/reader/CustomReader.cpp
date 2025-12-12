@@ -23,7 +23,7 @@ namespace CustomReader {
             if (!points) points = std::make_unique<std::vector<Data::Point>>();
 
             auto start = std::chrono::high_resolution_clock::now();
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "READING FILE: %s", filepath.c_str());
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\nREADING FILE: %s", filepath.c_str());
 
             pdal::StageFactory factory;
 
@@ -60,7 +60,7 @@ namespace CustomReader {
 
             points->clear();
             points->resize(totalPoints);
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\tTOTAL POINTS: %llu", totalPoints);
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "TOTAL POINTS: %llu", totalPoints);
 
             std::vector<uint16_t> intensities;
             intensities.reserve(totalPoints);
@@ -94,7 +94,7 @@ namespace CustomReader {
 
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\tFINISHED READING IN %ld ms\n", duration.count());
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "FINISHED READING IN %ld ms", duration.count());
         }
         catch (const pdal::pdal_error& e) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PDAL ERROR WHILE PROCESSING FILE %s: %s", filepath.c_str(), e.what());

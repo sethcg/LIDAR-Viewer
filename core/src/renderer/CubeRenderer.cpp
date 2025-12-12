@@ -120,14 +120,12 @@ namespace CubeRenderer {
         glBufferData(GL_ARRAY_BUFFER, maxInstanceCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
     }
 
-    void Render(bool enableCulling, glm::mat4 view, glm::mat4 projection) {
+    void Render(glm::mat4 view, glm::mat4 projection) {
         glEnable(GL_DEPTH_TEST);
-        // TODO: FIX CULLING, BREAKING WHEN CUBES COLLIDE
-        if(enableCulling) {
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_BACK);
-            glFrontFace(GL_CCW);
-        }
+        // TODO: FIX BACK-FACE CULLING (BREAKING WHEN CUBES COLLIDE)
+        // glEnable(GL_CULL_FACE);
+        // glCullFace(GL_BACK);
+        // glFrontFace(GL_CCW);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
