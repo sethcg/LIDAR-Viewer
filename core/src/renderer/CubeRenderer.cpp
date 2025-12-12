@@ -12,7 +12,7 @@
 
 namespace CubeRenderer {
 
-    static float globalScale = 2.0f;
+    static float globalScale = 0.05f;
     static glm::vec3 globalColor = glm::vec3(1.0f);
 
     static std::vector<Data::Cube> cubes;

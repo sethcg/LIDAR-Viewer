@@ -1,7 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <string>
 #include <iostream>
+#include <memory>
 
 #include <pdal/PointView.hpp>
 #include <pdal/Reader.hpp>
@@ -21,6 +23,7 @@ class CustomLazReader : public Reader {
             m_index = 0;
 
             reader = nullptr;
+            point = nullptr;
 
             m_xScale = 1.0;
             m_yScale = 1.0;
@@ -45,8 +48,9 @@ class CustomLazReader : public Reader {
         pdal::point_count_t m_numPoints;
         pdal::point_count_t m_index;
 
-        // LAZPERF READER
+        // LAZPERF VARIABLES
         lazperf::reader::named_file* reader;
+        lazperf::las::point14* point;
 
         // SCALING VALUES
         double m_xScale;

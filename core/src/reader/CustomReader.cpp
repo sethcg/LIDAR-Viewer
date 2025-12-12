@@ -60,9 +60,8 @@ namespace CustomReader {
 
             points->clear();
             points->resize(totalPoints);
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "TOTAL POINTS: %llu", totalPoints);
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\tTOTAL POINTS: %llu", totalPoints);
 
-            double sumX = 0, sumY = 0, sumZ = 0;
             std::vector<uint16_t> intensities;
             intensities.reserve(totalPoints);
 
@@ -79,10 +78,6 @@ namespace CustomReader {
                     point.intensity = view->getFieldAs<uint16_t>(pdal::Dimension::Id::Intensity, idx);
                     intensities.push_back(point.intensity);
 
-                    sumX += point.x;
-                    sumY += point.y;
-                    sumZ += point.z;
-
                     ++offset;
                 }
             }
@@ -92,23 +87,14 @@ namespace CustomReader {
             uint16_t min_intensity = intensities[static_cast<size_t>(0.01 * intensities.size())];
             uint16_t max_intensity = intensities[static_cast<size_t>(0.99 * intensities.size())];
 
-            // CENTER POINTS
-            double meanX = sumX / totalPoints;
-            double meanY = sumY / totalPoints;
-            double meanZ = sumZ / totalPoints;
-
             for (auto& point : *points) {
-                point.x -= meanX;
-                point.y -= meanY;
-                point.z -= meanZ;
-
                 uint16_t clamped = std::min(std::max(point.intensity, min_intensity), max_intensity);
                 point.normalized = float(clamped - min_intensity) / float(max_intensity - min_intensity);
             }
 
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "FINISHED READING IN %ld ms", duration.count());
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\tFINISHED READING IN %ld ms\n", duration.count());
         }
         catch (const pdal::pdal_error& e) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PDAL ERROR WHILE PROCESSING FILE %s: %s", filepath.c_str(), e.what());
