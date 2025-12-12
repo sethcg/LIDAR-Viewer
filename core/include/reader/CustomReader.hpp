@@ -13,13 +13,12 @@
 #include <pdal/Options.hpp>
 #include <pdal/Dimension.hpp>
 
-#include <CustomReader.hpp>
 #include <Point.hpp>
 
 namespace CustomReader {
 
     void GetPointData(
-        std::string filepath, 
+        const std::string& filepath, 
         std::unique_ptr<std::vector<Data::Point>>& points,
         uint32_t decimationStep = 1
     );

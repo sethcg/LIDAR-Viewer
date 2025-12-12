@@ -79,7 +79,7 @@ namespace UserInterface {
         ImGui::ColorEdit3("Global Color", glm::value_ptr(CubeRenderer::GetGlobalColor()));
 
         // GLOBAL SCALE
-        ImGui::SliderFloat("Global Scale", &CubeRenderer::GetGlobalScale(), 0.05f, 1.0f);
+        ImGui::SliderFloat("Global Scale", &CubeRenderer::GetGlobalScale(), 2.0f, 20.0f);
 
     }
 

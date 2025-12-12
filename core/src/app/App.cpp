@@ -51,6 +51,7 @@ namespace Application {
         // INITIALIZE IMGUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
+        ImGui::GetIO().IniFilename = nullptr;
         UserInterface::SetCustomTheme();
 
         ImGui_ImplSDL3_InitForOpenGL(window, glContext);
