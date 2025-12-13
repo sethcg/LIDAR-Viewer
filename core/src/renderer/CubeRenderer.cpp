@@ -188,6 +188,15 @@ namespace CubeRenderer {
         glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
     }
 
+    void UpdateBufferData() {
+        // UPDATE GPU BUFFERS FOR ALL INSTANCES
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::mat4), instanceModels.data());
+
+        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
+    }
+
     void UpdateCube(size_t index, const Data::Point& point) {
         if (index >= instanceCount) return; // INDEX OUT OF BOUNDS
 
@@ -224,7 +233,10 @@ namespace CubeRenderer {
     }
 
     // ACCESSOR METHODS
-    const std::vector<Data::Cube>& GetCubes() { return cubes; };
+    std::vector<Data::Cube>& GetCubes() { return cubes; };
+    size_t& GetInstanceCount() { return instanceCount; };
+    std::vector<glm::mat4>& GetInstanceModels() { return instanceModels; };
+    std::vector<glm::vec3>& GetInstanceColors() { return instanceColors; };
 
     float& GetGlobalScale() { return globalScale; };
     glm::vec3& GetGlobalColor() { return globalColor; };

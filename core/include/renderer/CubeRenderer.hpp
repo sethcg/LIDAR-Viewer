@@ -18,6 +18,8 @@ namespace CubeRenderer {
 
     void UpdateBufferSize(int maxInstanceCount);
 
+    void UpdateBufferData();
+
     void Render(glm::mat4 view, glm::mat4 projection);
 
     void AddCubes(const std::vector<Data::Point>& points);
@@ -29,7 +31,10 @@ namespace CubeRenderer {
     void Clear();
 
     // ACCESSOR METHODS
-    const std::vector<Data::Cube>& GetCubes();
+    std::vector<Data::Cube>& GetCubes();
+    size_t& GetInstanceCount();
+    std::vector<glm::mat4>& GetInstanceModels();
+    std::vector<glm::vec3>& GetInstanceColors();
 
     float& GetGlobalScale();
     glm::vec3& GetGlobalColor();

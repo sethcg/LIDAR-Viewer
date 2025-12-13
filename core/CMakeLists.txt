@@ -21,6 +21,7 @@ TARGET_LINK_LIBRARIES(core PUBLIC
     glad::glad
     imgui
     tinyfiledialog
+    lazperf::shared
     ${PDAL_LIBRARIES}
 )
 TARGET_INCLUDE_DIRECTORIES(core PUBLIC 

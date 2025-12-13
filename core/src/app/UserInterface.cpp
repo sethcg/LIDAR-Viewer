@@ -15,6 +15,7 @@
 #include <Camera.hpp>
 #include <Cube.hpp>
 #include <CubeRenderer.hpp>
+#include <CustomLargeFileReader.hpp>
 #include <CustomReader.hpp>
 #include <UserInterface.hpp>
 
@@ -124,6 +125,11 @@ namespace UserInterface {
                 CubeRenderer::Clear();
                 CubeRenderer::UpdateBufferSize(appContext->points->size());
                 CubeRenderer::AddCubes(*appContext->points);
+
+                // TESTING LARGE DATA EXTRACTING (10 MILLION ~= 15000ms)
+                // CubeRenderer::Clear();
+                // CustomLargeFileReader::TestCreateCubeDirect(appContext->filepath);
+
                 appContext->points->clear();
                 appContext->camera->RecalculateBounds();
             } else {

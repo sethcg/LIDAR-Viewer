@@ -20,7 +20,8 @@ namespace CustomReader {
     void GetPointData(
         const std::string& filepath, 
         std::unique_ptr<std::vector<Data::Point>>& points,
-        uint32_t decimationStep = 1
+        uint32_t decimationStep = 1,
+        double voxelSize = 0.2f
     );
 
 }

@@ -24,12 +24,9 @@ PDAL_CREATE_PLUGIN(
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PDAL_INCLUDE_DIRS}
         ${PDAL_INCLUDE_DIRS}/pdal
-        ${lazperf_SOURCE_DIR}/cpp
-        ${lazperf_SOURCE_DIR}/cpp/lazperf
-        ${lazperf_SOURCE_DIR}/cpp/lazperf/detail
     LINK_WITH
+        lazperf::shared
         ${PDAL_LIBRARIES}
-        lazperf_s
 )
 
 # CREATE SHARED LIBRARY AT THE CORRECT LOCATION

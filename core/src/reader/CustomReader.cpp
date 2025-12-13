@@ -17,7 +17,12 @@
 
 namespace CustomReader {
 
-    void GetPointData(const std::string& filepath, std::unique_ptr<std::vector<Data::Point>>& points, uint32_t decimationStep) {
+    void GetPointData(
+        const std::string& filepath, 
+        std::unique_ptr<std::vector<Data::Point>>& points,
+        uint32_t decimationStep,
+        double voxelSize)
+    {
         try {
             // ALLOCATE POINTS IF NOT ALREADY
             if (!points) points = std::make_unique<std::vector<Data::Point>>();
@@ -41,6 +46,7 @@ namespace CustomReader {
             pdal::Stage* lastStage = reader;
 
             // OPTIONAL DECIMATION FILTER
+            // TODO: FIX CUSTOM READER GOES THROUGH ALL POINTS (NO PERFORMANCE GAIN)
             if (decimationStep > 1) {
                 pdal::Stage* decimation = factory.createStage("filters.decimation");
                 pdal::Options decimationOptions;
@@ -48,6 +54,17 @@ namespace CustomReader {
                 decimation->setOptions(decimationOptions);
                 decimation->setInput(*lastStage);
                 lastStage = decimation;
+            }
+
+            // OPTIONAL VOXELGRID FILTER
+            // THIS REMOVES OVERLAPPING CUBES (SMALL PERFORMANCE LOSS)
+            if (voxelSize > 0.0) {
+                pdal::Stage* voxel = factory.createStage("filters.voxelcenternearestneighbor");
+                pdal::Options voxelOptions;
+                voxelOptions.add("cell", voxelSize);
+                voxel->setOptions(voxelOptions);
+                voxel->setInput(*lastStage);
+                lastStage = voxel;
             }
 
             // EXECUTE PIPELINE
@@ -71,6 +88,7 @@ namespace CustomReader {
                 for (pdal::PointId idx = 0; idx < view->size(); ++idx) {
                     Data::Point& point = (*points)[offset];
 
+                    // TODO: READ DIRECTLY TO CUBE (NO POINT DATA "MIDDLE MAN")
                     point.x = view->getFieldAs<double>(pdal::Dimension::Id::X, idx);
                     point.y = view->getFieldAs<double>(pdal::Dimension::Id::Y, idx);
                     point.z = view->getFieldAs<double>(pdal::Dimension::Id::Z, idx);
@@ -83,6 +101,7 @@ namespace CustomReader {
             }
 
             // NORMALIZE INTENSITY (1% – 99% PERCENTILE)
+            // TODO: IMPLEMENT CUMULATIVE HISTOGRAM
             std::sort(intensities.begin(), intensities.end());
             uint16_t min_intensity = intensities[static_cast<size_t>(0.01 * intensities.size())];
             uint16_t max_intensity = intensities[static_cast<size_t>(0.99 * intensities.size())];
