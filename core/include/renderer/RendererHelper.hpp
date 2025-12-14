@@ -7,7 +7,7 @@
 #include <glad/glad.h>
 #include <SDL3/SDL.h>
 
-namespace RendererHelper {
+namespace Renderer {
 
     std::string LoadTextFile(const char* filepath);
 

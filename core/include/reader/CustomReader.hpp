@@ -13,15 +13,18 @@
 #include <pdal/Options.hpp>
 #include <pdal/Dimension.hpp>
 
-#include <Point.hpp>
+#include <Camera.hpp>
+#include <Cube.hpp>
+#include <CubeRenderer.hpp>
 
 namespace CustomReader {
 
     void GetPointData(
         const std::string& filepath, 
-        std::unique_ptr<std::vector<Data::Point>>& points,
-        uint32_t decimationStep = 1,
-        double voxelSize = 0.2f
+        Camera& camera,
+        CubeRenderer& cubeRenderer,
+        double voxelSize = 0.2f,
+        uint32_t decimationStep = 1
     );
 
 }

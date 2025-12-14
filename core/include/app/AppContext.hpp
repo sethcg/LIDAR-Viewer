@@ -4,8 +4,11 @@
 #include <vector>
 #include <string>
 
-#include <Point.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <Camera.hpp>
+#include <CubeRenderer.hpp>
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -20,13 +23,18 @@ namespace Application {
 
     struct AppContext {
         std::string filepath;
-        std::unique_ptr<std::vector<Data::Point>> points;
-        
+
+        float globalScale;
+        glm::vec3 globalColor;
+
         std::unique_ptr<Camera> camera;
+        std::unique_ptr<CubeRenderer> cubeRenderer;
 
         AppContext() {
             filepath = "";
-            points = std::make_unique<std::vector<Data::Point>>();
+            
+            globalScale = 0.05f;
+            globalColor = glm::vec3(1.0f);
         }
     };
 

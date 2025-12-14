@@ -11,7 +11,6 @@
 #include <lazperf/las.hpp>
 #include <lazperf/readers.hpp>
 
-#include <Point.hpp>
 #include <CubeRenderer.hpp>
 
 // DEVELOPER NOTE:
@@ -45,21 +44,14 @@ namespace CustomLargeFileReader {
         );
     }
 
-    void TestCreateCubeDirect(const std::string& filename) {
+    void TestCreateCubeDirect(const std::string& filename, CubeRenderer& cubeRenderer) {
         auto start = std::chrono::high_resolution_clock::now();
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\nREADING FILE: %s", filename.c_str());
 
-        // SETUP READER
         Initialize(filename);
 
-        // GET RENDERER VARIABLES
-        std::vector<Data::Cube> &cubes = CubeRenderer::GetCubes();
-        size_t &instanceCount = CubeRenderer::GetInstanceCount();
-        std::vector<glm::mat4> &instanceModels = CubeRenderer::GetInstanceModels();
-        std::vector<glm::vec3> &instanceColors = CubeRenderer::GetInstanceColors();
-
-        // UPDATE CUBE GPU BUFFER SIZE
-        CubeRenderer::UpdateBufferSize(pointCount);
+        std::vector<Data::Cube> &cubes = cubeRenderer.GetCubes();
+        cubeRenderer.UpdateBufferSize(pointCount);
 
         cubes.reserve(pointCount);
 
@@ -67,12 +59,14 @@ namespace CustomLargeFileReader {
         // LOWER VALUE IS FASTER, BUT LESS PRECISE
         const size_t BIN_COUNT = 65535;
         std::vector<size_t> histogram(BIN_COUNT, 0);
+
+        std::vector<uint16_t> intensities(pointCount);
         
         uint16_t min_intensity = UINT16_MAX;
         uint16_t max_intensity = 0;
 
         std::unique_ptr<char[]> pointbuffer(new char[pointSize]);
-        for (uint64_t i = 0; i < pointCount; ++i) {
+        for (uint64_t index = 0; index < pointCount; ++index) {
             reader->readPoint(pointbuffer.get());
             lazperf::las::point14 point(pointbuffer.get());
 
@@ -80,8 +74,9 @@ namespace CustomLargeFileReader {
                 double((point.x() * scale.x + offset.x) - center.x),
                 double((point.y() * scale.y + offset.y) - center.y),
                 double((point.z() * scale.z + offset.z) - center.z)
-            );      
-            cubes.emplace_back(position, point.intensity());
+            );
+            cubeRenderer.AddCube(index, position);
+            intensities[index] = point.intensity();
 
             // BUILD COLOR HISTOGRAM
             min_intensity = std::min(min_intensity, point.intensity());
@@ -97,17 +92,14 @@ namespace CustomLargeFileReader {
         }
 
         for (uint64_t i = 0; i < pointCount; ++i) {
-            // APPLY COLOR CHANGES TO CUBE
-            float normalizedValue = float(cumulativeHistogram[cubes[i].intensity]) / float(pointCount);
-            cubes[i].color = Data::ColorMap(glm::clamp(normalizedValue, 0.0f, 1.0f));
-
-            // DIRECTLY ADD INSTANCE COLOR/MODEL DATA TO GPU BUFFERS
-            instanceColors[i] = cubes[i].color;
-            instanceModels[i] = glm::translate(glm::mat4(1.0f), cubes[i].position);
-            instanceCount++;
+            float normalizedValue = float(cumulativeHistogram[intensities[i]]) / float(pointCount);
+            glm::vec3 color = Data::ColorMap(normalizedValue);
+            cubeRenderer.UpdateInstanceColor(i, color);
+            cubes[i].color = color;
         }
-        CubeRenderer::UpdateBufferData();
-        
+
+        cubeRenderer.UpdateBuffers();
+
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "FINISHED READING IN %ld ms", duration.count());

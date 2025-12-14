@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch (Windows)",
+            "name": "Launch Debug (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}\\build\\default\\Debug\\main.exe",
@@ -11,7 +11,19 @@
             "stopAtEntry": false,
             "environment": [],
             "console": "newExternalWindow",
-            "preLaunchTask": "Build"
+            "preLaunchTask": "Build Debug"
+        },
+        {
+            "name": "Launch Release (Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}\\build\\default\\Release\\main.exe",
+            "cwd": "${workspaceFolder}\\build\\default\\Release",
+            "args": [],
+            "stopAtEntry": false,
+            "environment": [],
+            "console": "newExternalWindow",
+            "preLaunchTask": "Build Release"
         }
     ]
 }

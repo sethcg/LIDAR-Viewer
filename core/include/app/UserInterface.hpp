@@ -24,7 +24,7 @@ namespace UserInterface {
 
     void RenderMainPanel(Application::AppContext* appContext);
 
-    void DrawCubeSettings();
+    void DrawCubeSettings(Application::AppContext* appContext);
 
     void DrawCameraSettings(Application::AppContext* appContext);
 

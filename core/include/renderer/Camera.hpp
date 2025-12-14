@@ -10,15 +10,15 @@
 #include <glm/common.hpp>
 #include <glad/glad.h>
 
-#include <App.hpp>
-#include <CubeRenderer.hpp>
+// FORWARD DECLARATION
+class CubeRenderer;
 
 class Camera {
     public:
         Camera(int windowWidth, int windowHeight);
 
-        void RecalculateBounds();
         void Resize(int windowWidth, int windowHeight);
+        void UpdateBounds(glm::vec3 center, float radius);
         void Update(float deltaTime);
 
         void ProcessKeyboard(float deltaTime);
@@ -40,7 +40,6 @@ class Camera {
         glm::mat4 projection;
 
         glm::vec3 sceneCenter = glm::vec3(0.0f);
-        float sceneDistance = 5.0f;
         float sceneRadius = 5.0f;
 
         // ORBIT CAMERA ROTATION

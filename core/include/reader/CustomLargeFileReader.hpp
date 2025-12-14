@@ -13,11 +13,11 @@
 #include <lazperf/las.hpp>
 #include <lazperf/readers.hpp>
 
-#include <Point.hpp>
+#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 
 namespace CustomLargeFileReader {
 
-    void TestCreateCubeDirect(const std::string& filename);
+    void TestCreateCubeDirect(const std::string& filename, CubeRenderer& cubeRenderer);
 
 }

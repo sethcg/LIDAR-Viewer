@@ -63,13 +63,13 @@ namespace UserInterface {
         ImGui::Begin("##panel");
 
         DrawFileSelection(appContext);
-        DrawCubeSettings();
+        DrawCubeSettings(appContext);
         DrawCameraSettings(appContext);
 
         ImGui::End();
     }
 
-    void DrawCubeSettings() {
+    void DrawCubeSettings(Application::AppContext* appContext) {
         // TITLE
         ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
@@ -77,10 +77,10 @@ namespace UserInterface {
         ImGui::PopStyleColor();
 
         // GLOBAL COLOR (TINT)
-        ImGui::ColorEdit3("Global Color", glm::value_ptr(CubeRenderer::GetGlobalColor()));
+        ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
 
         // GLOBAL SCALE
-        ImGui::SliderFloat("Global Scale", &CubeRenderer::GetGlobalScale(), 0.05f, 1.0f);
+        ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
 
     }
 
@@ -119,19 +119,14 @@ namespace UserInterface {
             if (selected) {
                 // READ LAZ FILE DATA
                 appContext->filepath = selected;
-                CustomReader::GetPointData(appContext->filepath, appContext->points);
-                
-                // CLEAR, THEN ADD EACH CUBE
-                CubeRenderer::Clear();
-                CubeRenderer::UpdateBufferSize(appContext->points->size());
-                CubeRenderer::AddCubes(*appContext->points);
+                CustomReader::GetPointData(
+                    appContext->filepath, 
+                    *appContext->camera, 
+                    *appContext->cubeRenderer
+                );
 
                 // TESTING LARGE DATA EXTRACTING (10 MILLION ~= 15000ms)
-                // CubeRenderer::Clear();
                 // CustomLargeFileReader::TestCreateCubeDirect(appContext->filepath);
-
-                appContext->points->clear();
-                appContext->camera->RecalculateBounds();
             } else {
                 return;
             }

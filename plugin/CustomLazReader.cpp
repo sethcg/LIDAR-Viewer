@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <string>
 #include <iostream>
 #include <memory>
@@ -33,6 +34,7 @@ void CustomLazReader::initialize() {
     if (!reader) throwError("FAILED TO CREATE LAZPERF READER");
     
     const lazperf::header14& header = reader->header();
+    pointBuffer.resize(header.point_record_length);
 
     m_xScale = header.scale.x;
     m_yScale = header.scale.y;
@@ -41,6 +43,19 @@ void CustomLazReader::initialize() {
     m_xOffset = header.offset.x;
     m_yOffset = header.offset.y;
     m_zOffset = header.offset.z;
+
+    center_x = (header.minx + header.maxx) / 2.0;
+    center_y = (header.miny + header.maxy) / 2.0;
+    center_z = (header.minz + header.maxz) / 2.0;
+
+    // ADD THE CENTERED MINIMUM/MAXIMUM VALUES TO ROOT
+    MetadataNode root = getMetadata();
+    root.add("minx", header.minx);
+    root.add("miny", header.miny);
+    root.add("minz", header.minz);
+    root.add("maxx", header.maxx);
+    root.add("maxy", header.maxy);
+    root.add("maxz", header.maxz);
 }
 
 void CustomLazReader::addDimensions(PointLayoutPtr layout) {
@@ -52,60 +67,41 @@ void CustomLazReader::addDimensions(PointLayoutPtr layout) {
     layout->registerDim(Id::Intensity);
 }
 
-void CustomLazReader::ready(PointTableRef /* table */) {
+void CustomLazReader::ready(PointTableRef table) {
     m_numPoints = reader->pointCount();
     m_index = 0;
 }
 
 point_count_t CustomLazReader::read(PointViewPtr view, point_count_t count) {
-    point_count_t numRead = 0;
     point_count_t remainingPoints = m_numPoints - m_index;
     point_count_t pointsToRead = (std::min)(count, remainingPoints);
 
-    const lazperf::header14& header = reader->header();
-    double centerX = (header.minx + header.maxx) / 2.0;
-    double centerY = (header.miny + header.maxy) / 2.0;
-    double centerZ = (header.minz + header.maxz) / 2.0;
+    double xBase = m_xOffset - center_x;
+    double yBase = m_yOffset - center_y;
+    double zBase = m_zOffset - center_z;
 
-    // ALLOCATE DYNAMIC BUFFER SIZE
-    uint16_t bufferSize = header.point_record_length;
-    std::unique_ptr<char[]> pointbuffer(new char[bufferSize]);
-
+    PointRef point(*view, 0);
     for (point_count_t i = 0; i < pointsToRead; ++i) {
-        try {
-            reader->readPoint(pointbuffer.get());
-            point = new lazperf::las::point14(pointbuffer.get());
+        reader->readPoint(pointBuffer.data());
+        const char* data = pointBuffer.data();
 
-            view->setField<double>(Dimension::Id::X, numRead, (point->x() * m_xScale + m_xOffset) - centerX);
-            view->setField<double>(Dimension::Id::Y, numRead, (point->y() * m_yScale + m_yOffset) - centerY);
-            view->setField<double>(Dimension::Id::Z, numRead, (point->z() * m_zScale + m_zOffset) - centerZ);
-            view->setField<uint16_t>(Dimension::Id::Intensity, numRead, point->intensity());
+        int32_t x = lazperf::utils::unpack<int32_t>(data); data += 4;
+        int32_t y = lazperf::utils::unpack<int32_t>(data); data += 4;
+        int32_t z = lazperf::utils::unpack<int32_t>(data); data += 4;
+        uint16_t intensity = lazperf::utils::unpack<uint16_t>(data);
 
-            // if (numRead == 0) {
-            //     std::cout << std::fixed
-            //         << "\n\tX=" << (point->x() * m_xScale + m_xOffset) - centerX
-            //         << "\n\tY=" << (point->y() * m_yScale + m_yOffset) - centerY
-            //         << "\n\tZ=" << (point->z() * m_zScale + m_zOffset) - centerZ
-            //     << std::endl;
-            // }
-            
-            numRead++;
-            m_index++;
-        } catch (const std::exception& e) {
-            std::cerr << "ERROR READING POINT " << m_index << ": " << e.what() << std::endl;
-            break;
-        }
+        point.setPointId(m_index);
+        point.setField(Dimension::Id::X, x * m_xScale + xBase);
+        point.setField(Dimension::Id::Y, y * m_yScale + yBase);
+        point.setField(Dimension::Id::Z, z * m_zScale + zBase);
+        point.setField(Dimension::Id::Intensity, intensity);
+
+        m_index++;
     }
-    return numRead;
+    return pointsToRead;
 }
 
 void CustomLazReader::done(PointTableRef /*table*/) {
-    if (reader) {
-        delete reader;
-        reader = nullptr;
-    }
-    if (point) {
-        delete point;
-        point = nullptr;
-    }
+    delete reader;
+    reader = nullptr;
 }

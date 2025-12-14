@@ -42,7 +42,7 @@ namespace Application {
         if (!CreateGLContext(false)) return SDL_APP_FAILURE;
 
         appContext.camera = std::make_unique<Camera>(width, height);
-        CubeRenderer::Init();
+        appContext.cubeRenderer = std::make_unique<CubeRenderer>();
 
         TTF_Init();
         TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18);
@@ -68,6 +68,7 @@ namespace Application {
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                 width = event->window.data1;
                 height = event->window.data2;
+                glViewport(0, 0, width, height);
                 appContext.camera->Resize(width, height);
                 break;
             case SDL_EVENT_KEY_DOWN:
@@ -88,12 +89,17 @@ namespace Application {
     }
 
     void App::RenderScene(float deltaTime) {
+        // DRAW BACKGROUND/CLEAR FRAMEBUFFER
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         appContext.camera->ProcessKeyboard(deltaTime);
         appContext.camera->Update(deltaTime);
 
-        CubeRenderer::Render(
-            appContext.camera->GetView(),
-            appContext.camera->GetProjection()
+        appContext.cubeRenderer->Render(
+            *appContext.camera,
+            appContext.globalScale,
+            appContext.globalColor
         );
 
         TextRenderer::UpdateFPS();
@@ -125,7 +131,6 @@ namespace Application {
 
     void App::Shutdown() {
         TextRenderer::Shutdown();
-        CubeRenderer::Shutdown();
 
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();

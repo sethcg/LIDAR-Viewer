@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <string>
 #include <iostream>
 #include <memory>
@@ -19,19 +20,7 @@ using namespace pdal;
 class CustomLazReader : public Reader {
     public:
         CustomLazReader() {
-            m_numPoints = 0;
-            m_index = 0;
-
             reader = nullptr;
-            point = nullptr;
-
-            m_xScale = 1.0;
-            m_yScale = 1.0;
-            m_zScale = 1.0;
-
-            m_xOffset = 0.0;
-            m_yOffset = 0.0;
-            m_zOffset = 0.0;
         };
         std::string getName() const;
 
@@ -45,20 +34,25 @@ class CustomLazReader : public Reader {
         virtual void done(PointTableRef table);
 
     private:
-        pdal::point_count_t m_numPoints;
-        pdal::point_count_t m_index;
+        pdal::point_count_t m_numPoints = 0;
+        pdal::point_count_t m_index = 0;
 
         // LAZPERF VARIABLES
         lazperf::reader::named_file* reader;
-        lazperf::las::point14* point;
+        std::vector<char> pointBuffer;
 
         // SCALING VALUES
-        double m_xScale;
-        double m_yScale;
-        double m_zScale;
+        double m_xScale = 1.0;
+        double m_yScale = 1.0;
+        double m_zScale = 1.0;
 
         // OFFSET VALUES
-        double m_xOffset;
-        double m_yOffset;
-        double m_zOffset;
+        double m_xOffset = 0.0;
+        double m_yOffset = 0.0;
+        double m_zOffset = 0.0;
+
+        // CENTER VALUES
+        double center_x = 0.0;
+        double center_y = 0.0;
+        double center_z = 0.0;
 };

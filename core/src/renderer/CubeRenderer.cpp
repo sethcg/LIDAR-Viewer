@@ -5,240 +5,153 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <Camera.hpp>
 #include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
-#include <Point.hpp>
 
-namespace CubeRenderer {
+using namespace Renderer;
 
-    static float globalScale = 0.05f;
-    static glm::vec3 globalColor = glm::vec3(1.0f);
+// CONSTRUCTOR / DESTRUCTOR
+CubeRenderer::CubeRenderer() { Init(); };
+CubeRenderer::~CubeRenderer() { Shutdown(); }
 
-    static std::vector<Data::Cube> cubes;
+inline void CubeRenderer::Init() {
+    std::string vertexSource = LoadTextFile("../assets/shaders/cube/cube.vert");
+    std::string fragmentSource = LoadTextFile("../assets/shaders/cube/cube.frag");
 
-    static GLuint vao = 0;
-    static GLuint vbo = 0;
-    static GLuint ebo = 0;
-    static GLuint instanceVBO = 0;
-    static GLuint instanceColorVBO = 0;
-    static GLuint shaderProgram = 0;
+    GLuint vertexShader = CreateShader(vertexSource, GL_VERTEX_SHADER);
+    GLuint fragmentShader = CreateShader(fragmentSource, GL_FRAGMENT_SHADER);
 
-    static GLint uViewProjectionLocation = -1;
-    static GLint uGlobalColorLocation = -1;
-    static GLint uGlobalScaleLocation = -1;
+    shaderProgram = CreateShaderProgram(vertexShader, fragmentShader);
 
-    static size_t instanceCount = 0;
-    static std::vector<glm::mat4> instanceModels;
-    static std::vector<glm::vec3> instanceColors;
+    uViewProjectionLocation = glGetUniformLocation(shaderProgram, "uViewProjection");
+    uGlobalColorLocation = glGetUniformLocation(shaderProgram, "uGlobalColor");
+    uGlobalScaleLocation = glGetUniformLocation(shaderProgram, "uGlobalScale");
 
-    // CUBE VERTICES (CORNER POSITIONS)
-    static float cubeVertices[] = {
-        -0.5f, -0.5f, -0.5f,    // 1
-        0.5f, -0.5f, -0.5f,     // 2
-        0.5f,  0.5f, -0.5f,     // 3
-        -0.5f,  0.5f, -0.5f,    // 4
-        -0.5f, -0.5f,  0.5f,    // 5
-        0.5f, -0.5f,  0.5f,     // 6
-        0.5f,  0.5f,  0.5f,     // 7
-        -0.5f,  0.5f,  0.5f     // 8
-    };
+    // SETUP VAO, VBO, EBO, INSTANCE VARIABLES
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+    glGenBuffers(1, &instanceVBO);
+    glGenBuffers(1, &instanceColorVBO);
 
-    // INDICES FOR TRIANGLES (6 FACES)
-    static unsigned int cubeIndices[] = {
-        0, 1, 2, 2, 3, 0,   // BACK
-        5, 4, 7, 7, 6, 5,   // FRONT
-        4, 0, 3, 3, 7, 4,   // LEFT
-        1, 5, 6, 6, 2, 1,   // RIGHT
-        3, 2, 6, 6, 7, 3,   // TOP
-        4, 5, 1, 1, 0, 4    // BOTTOM
-    };
+    glBindVertexArray(vao);
 
-    void Init() {
-        std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.vert");
-        std::string fragmentSource = RendererHelper::LoadTextFile("../assets/shaders/cube/cube.frag");
+    // CUBE VERTEX POSITIONS
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
 
-        GLuint vertexShader   = RendererHelper::CreateShader(vertexSource, GL_VERTEX_SHADER);
-        GLuint fragmentShader = RendererHelper::CreateShader(fragmentSource, GL_FRAGMENT_SHADER);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,3 * sizeof(float), (void*) 0);
 
-        shaderProgram = RendererHelper::CreateShaderProgram(vertexShader, fragmentShader);
+    // CUBE INDICES
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
 
-        uViewProjectionLocation = glGetUniformLocation(shaderProgram, "uViewProjection");
-        uGlobalColorLocation = glGetUniformLocation(shaderProgram, "uGlobalColor");
-        uGlobalScaleLocation = glGetUniformLocation(shaderProgram, "uGlobalScale");
+    // SETUP INSTANCE MODEL MATRIX BUFFERS
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
-        // CUBE VERTEX DATA
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-        glGenBuffers(1, &instanceVBO);
-        glGenBuffers(1, &instanceColorVBO);
-
-        glBindVertexArray(vao);
-
-        // VERTEX POSITIONS
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
-
-        // INDEX POSITIONS
-        glGenBuffers(1, &ebo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-
-        // INSTANCE MODEL MATRIX (4 vec4 ATTRIBUTES)
-        glGenBuffers(1, &instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER, instanceCount * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
-        for (int i = 0; i < 4; ++i) {
-            glEnableVertexAttribArray(1 + i);
-            glVertexAttribPointer(1 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4) * i));
-            glVertexAttribDivisor(1 + i, 1); // ADVANCE PER INSTANCE
-        }
-
-        // INSTANCE COLOR
-        glGenBuffers(1, &instanceColorVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-        glBufferData(GL_ARRAY_BUFFER, instanceCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
-        glEnableVertexAttribArray(5);
-        glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-        glVertexAttribDivisor(5, 1); // ADVANCE PER INSTANCE
-
-        glBindVertexArray(0);
+    for (int i = 0; i < 4; ++i) {
+        glEnableVertexAttribArray(1 + i);
+        glVertexAttribPointer(1 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),(void*)(sizeof(glm::vec4) * i));
+        glVertexAttribDivisor(1 + i, 1);
     }
 
-    void UpdateBufferSize(int maxInstanceCount) {
-        instanceCount = 0;
+    // SETUP INSTANCE COLOR BUFFERS
+    glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
-        instanceModels.resize(maxInstanceCount, glm::mat4(1.0f));
-        instanceColors.resize(maxInstanceCount, glm::vec3(1.0f));
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0);
+    glVertexAttribDivisor(5, 1);
 
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER, maxInstanceCount * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
-
-        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-        glBufferData(GL_ARRAY_BUFFER, maxInstanceCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
-    }
-
-    void Render(glm::mat4 view, glm::mat4 projection) {
-        glEnable(GL_DEPTH_TEST);
-        // TODO: FIX BACK-FACE CULLING (BREAKING WHEN CUBES COLLIDE)
-        // glEnable(GL_CULL_FACE);
-        // glCullFace(GL_BACK);
-        // glFrontFace(GL_CCW);
-
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        if (instanceCount == 0) return;
-
-        glUseProgram(shaderProgram);
-        glBindVertexArray(vao);
-
-        glm::mat4 viewProjection = projection * view;
-        glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
-        glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalColor));
-        glUniform1f(uGlobalScaleLocation, globalScale);
-
-        glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, instanceCount);
-
-        glBindVertexArray(0);
-        glUseProgram(0);
-
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_CULL_FACE);
-    }
-
-    void AddCubes(const std::vector<Data::Point>& points) {
-        size_t pointCount = points.size();
-        if (pointCount == 0) return;
-
-        // RESERVE ADDITIONAL SPACE FOR CUBES/INSTANCE DATA
-        cubes.reserve(cubes.size() + pointCount);
-        if (instanceModels.size() < instanceCount + pointCount) {
-            instanceModels.resize(instanceCount + pointCount);
-        }
-        if (instanceColors.size() < instanceCount + pointCount) {
-            instanceColors.resize(instanceCount + pointCount);
-        }
-
-        glm::mat4 modelMatrix(1.0f);
-        for (size_t i = 0; i < pointCount; ++i) {
-            const Data::Point& point = points[i];
-
-            // PRECOMPUTE CUBE POSITION AND COLOR
-            glm::vec3 position = glm::vec3(point.x, point.y, point.z);
-            glm::vec3 color = Data::ColorMap(point.normalized);
-            
-            // ADD CUBE
-            cubes.emplace_back(position, color);
-
-            // DIRECTLY SET TRANSLATION IN THE MATRIX MODEL (EFFICIENT)
-            modelMatrix[3] = glm::vec4(position, 1.0f);
-            instanceModels[instanceCount] = modelMatrix;
-            instanceColors[instanceCount] = color;
-            instanceCount++;
-        }
-
-        // UPDATE GPU BUFFERS FOR ALL INSTANCES
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::mat4), instanceModels.data());
-
-        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
-    }
-
-    void UpdateBufferData() {
-        // UPDATE GPU BUFFERS FOR ALL INSTANCES
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::mat4), instanceModels.data());
-
-        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
-    }
-
-    void UpdateCube(size_t index, const Data::Point& point) {
-        if (index >= instanceCount) return; // INDEX OUT OF BOUNDS
-
-        glm::vec3 position = glm::vec3(point.x, point.y, point.z);
-        glm::vec3 color = Data::ColorMap(point.normalized);
-        cubes[index] = Data::Cube(position, color);
-
-        // UPDATE INSTANCE ARRAYS
-        instanceModels[index] = glm::translate(glm::mat4(1.0f), position);
-        instanceColors[index] = color;
-
-        // UPDATE GPU BUFFERS FOR SINGLE INSTANCE
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::mat4), sizeof(glm::mat4), &instanceModels[index]);
-
-        glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::vec3), sizeof(glm::vec3), &instanceColors[index]);
-    }
-
-    void Clear() {
-        cubes.clear();
-        instanceModels.clear();
-        instanceColors.clear();
-        instanceCount = 0;
-    }
-
-    void Shutdown() {
-        glDeleteBuffers(1, &vbo);
-        glDeleteBuffers(1, &ebo);
-        glDeleteBuffers(1, &instanceVBO);
-        glDeleteBuffers(1, &instanceColorVBO);
-        glDeleteVertexArrays(1, &vao);
-        glDeleteProgram(shaderProgram);
-    }
-
-    // ACCESSOR METHODS
-    std::vector<Data::Cube>& GetCubes() { return cubes; };
-    size_t& GetInstanceCount() { return instanceCount; };
-    std::vector<glm::mat4>& GetInstanceModels() { return instanceModels; };
-    std::vector<glm::vec3>& GetInstanceColors() { return instanceColors; };
-
-    float& GetGlobalScale() { return globalScale; };
-    glm::vec3& GetGlobalColor() { return globalColor; };
-
+    glBindVertexArray(0);
 }
+
+inline void CubeRenderer::Shutdown() {
+    if (vbo) glDeleteBuffers(1, &vbo);
+    if (ebo) glDeleteBuffers(1, &ebo);
+    if (instanceVBO) glDeleteBuffers(1, &instanceVBO);
+    if (instanceColorVBO) glDeleteBuffers(1, &instanceColorVBO);
+    if (vao) glDeleteVertexArrays(1, &vao);
+    if (shaderProgram) glDeleteProgram(shaderProgram);
+    vao = vbo = ebo = instanceVBO = instanceColorVBO = shaderProgram = 0;
+}
+
+void CubeRenderer::Render(Camera& camera, float globalScale, glm::vec3 globalColor) {
+    if (instanceCount == 0) return;
+
+    const glm::mat4& view = camera.GetView();
+    const glm::mat4& projection = camera.GetProjection();
+
+    glEnable(GL_DEPTH_TEST);
+
+    glUseProgram(shaderProgram);
+    glBindVertexArray(vao);
+
+    glm::mat4 viewProjection = projection * view;
+
+    glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
+    glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalColor));
+    glUniform1f(uGlobalScaleLocation, globalScale);
+
+    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(instanceCount));
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+
+    glDisable(GL_DEPTH_TEST);
+}
+
+void CubeRenderer::UpdateBufferSize(uint64_t pointCount) {
+    // cubes.clear();
+    // cubes.reserve(pointCount);
+
+    instanceCount = 0;
+    instanceModels.resize(pointCount);
+    instanceColors.resize(pointCount);
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+    glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+}
+
+void CubeRenderer::AddCube(uint64_t index, glm::vec3 position, glm::vec3 color) {
+    // ADD CUBE
+    // cubes.emplace_back(position, color);
+
+    // UPDATE INSTANCE BUFFERS
+    UpdateInstancePosition(index, position);
+    UpdateInstanceColor(index, color);
+    instanceCount++;
+}
+
+void CubeRenderer::UpdateInstancePosition(uint64_t index, glm::vec3 position) {
+    instanceModels[index] = glm::translate(glm::mat4(1.0f), position);
+}
+
+void CubeRenderer::UpdateInstanceColor(uint64_t index, glm::vec3 color) {
+    instanceColors[index] = color;
+}
+
+void CubeRenderer::UpdateBuffers() {
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::mat4), instanceModels.data());
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
+}
+
+void CubeRenderer::Clear() {
+    cubes.clear();
+    instanceModels.clear();
+    instanceColors.clear();
+    instanceCount = 0;
+}
+
+// ACCESSORS
+std::vector<Data::Cube>& CubeRenderer::GetCubes() { return cubes; }

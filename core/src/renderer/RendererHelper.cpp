@@ -7,7 +7,7 @@
 
 #include <RendererHelper.hpp>
 
-namespace RendererHelper {
+namespace Renderer {
 
     std::string LoadTextFile(const char* filepath) {
         std::ifstream file(filepath);

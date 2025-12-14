@@ -3,26 +3,22 @@
   "configurePresets": [
     {
       "name": "default",
-      "displayName": "Visual Studio Build Tools 2022 Release - amd64",
-      "description": "Using compilers for Visual Studio 17 2022 (x64 architecture)",
       "generator": "Visual Studio 17 2022",
-      "toolset": "host=x64",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "toolchainFile": "./vcpkg/scripts/buildsystems/vcpkg.cmake",
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": "cl.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "BUILD_SHARED_LIBS": "OFF"
-      }
+      "toolchainFile": "./vcpkg/scripts/buildsystems/vcpkg.cmake"
     }
   ],
   "buildPresets": [
     {
-      "name": "default",
-      "configurePreset": "default"
+      "name": "release",
+      "configurePreset": "default",
+      "configuration": "Release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "default",
+      "configuration": "Debug"
     }
   ],
   "testPresets": [

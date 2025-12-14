@@ -44,13 +44,13 @@ namespace TextRenderer {
     void Init(TTF_Font* font) {
         textFont = font;
 
-        std::string vertexSource   = RendererHelper::LoadTextFile("../assets/shaders/text/text.vert");
-        std::string fragmentSource = RendererHelper::LoadTextFile("../assets/shaders/text/text.frag");
+        std::string vertexSource   = Renderer::LoadTextFile("../assets/shaders/text/text.vert");
+        std::string fragmentSource = Renderer::LoadTextFile("../assets/shaders/text/text.frag");
 
-        GLuint vertexShader   = RendererHelper::CreateShader(vertexSource, GL_VERTEX_SHADER);
-        GLuint fragmentShader = RendererHelper::CreateShader(fragmentSource, GL_FRAGMENT_SHADER);
+        GLuint vertexShader   = Renderer::CreateShader(vertexSource, GL_VERTEX_SHADER);
+        GLuint fragmentShader = Renderer::CreateShader(fragmentSource, GL_FRAGMENT_SHADER);
 
-        shaderProgram = RendererHelper::CreateShaderProgram(vertexShader, fragmentShader);
+        shaderProgram = Renderer::CreateShaderProgram(vertexShader, fragmentShader);
 
         uProjLocation = glGetUniformLocation(shaderProgram, "uProj");
 
