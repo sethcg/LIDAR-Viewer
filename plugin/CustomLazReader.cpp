@@ -85,18 +85,16 @@ point_count_t CustomLazReader::read(PointViewPtr view, point_count_t count) {
         reader->readPoint(pointBuffer.data());
         const char* data = pointBuffer.data();
 
-        int32_t x = lazperf::utils::unpack<int32_t>(data); data += 4;
-        int32_t y = lazperf::utils::unpack<int32_t>(data); data += 4;
-        int32_t z = lazperf::utils::unpack<int32_t>(data); data += 4;
+        int32_t x = lazperf::utils::unpack<uint32_t>(data); data += 4;
+        int32_t y = lazperf::utils::unpack<uint32_t>(data); data += 4;
+        int32_t z = lazperf::utils::unpack<uint32_t>(data); data += 4;
         uint16_t intensity = lazperf::utils::unpack<uint16_t>(data);
 
-        point.setPointId(m_index);
+        point.setPointId(i);
         point.setField(Dimension::Id::X, x * m_xScale + xBase);
         point.setField(Dimension::Id::Y, y * m_yScale + yBase);
         point.setField(Dimension::Id::Z, z * m_zScale + zBase);
         point.setField(Dimension::Id::Intensity, intensity);
-
-        m_index++;
     }
     return pointsToRead;
 }
@@ -105,3 +103,47 @@ void CustomLazReader::done(PointTableRef /*table*/) {
     delete reader;
     reader = nullptr;
 }
+
+// point_count_t CustomLazReader::read(PointViewPtr view, point_count_t count) {
+//     point_count_t remainingPoints = m_numPoints - m_index;
+//     point_count_t pointsToRead = (std::min)(count, remainingPoints);
+
+//     const double xBase = m_xOffset - center_x;
+//     const double yBase = m_yOffset - center_y;
+//     const double zBase = m_zOffset - center_z;
+
+//     auto start = std::chrono::high_resolution_clock::now();
+//     auto decomp_time = std::chrono::microseconds(0);
+//     auto process_time = std::chrono::microseconds(0);
+
+//     // std::vector<char> pointBuffer(header->pointSize);
+//     for (point_count_t i = 0; i < pointsToRead; ++i) {
+//         auto decomp_start = std::chrono::high_resolution_clock::now();
+//         reader->readPoint(pointBuffer.data());
+//         auto decomp_end = std::chrono::high_resolution_clock::now();
+//         decomp_time += std::chrono::duration_cast<std::chrono::microseconds>(decomp_end - decomp_start);
+        
+//         auto process_start = std::chrono::high_resolution_clock::now();
+//         const char* data = pointBuffer.data();
+//         const int32_t x = *reinterpret_cast<const int32_t*>(data);
+//         const int32_t y = *reinterpret_cast<const int32_t*>(data + 4);
+//         const int32_t z = *reinterpret_cast<const int32_t*>(data + 8);
+//         const uint16_t intensity = *reinterpret_cast<const uint16_t*>(data + 12);
+
+//         const PointId pid = m_index++;
+//         view->setField(Dimension::Id::X, pid, x * m_xScale + xBase);
+//         view->setField(Dimension::Id::Y, pid, y * m_yScale + yBase);
+//         view->setField(Dimension::Id::Z, pid, z * m_zScale + zBase);
+//         view->setField(Dimension::Id::Intensity, pid, intensity);
+//         auto process_end = std::chrono::high_resolution_clock::now();
+//         process_time += std::chrono::duration_cast<std::chrono::microseconds>(process_end - process_start);
+//     }
+    
+//     auto total = std::chrono::high_resolution_clock::now() - start;
+//     std::cout << "Read " << pointsToRead << " points:\n"
+//               << "  Decompression: " << decomp_time.count() / 1000.0 << "ms\n"
+//               << "  Processing: " << process_time.count() / 1000.0 << "ms\n"
+//               << "  Total: " << std::chrono::duration_cast<std::chrono::milliseconds>(total).count() << "ms\n";
+    
+//     return pointsToRead;
+// }

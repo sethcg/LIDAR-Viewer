@@ -34,6 +34,7 @@ namespace CustomReader {
             StageFactory factory;
 
             // CREATE CUSTOM LAZ READER
+            // Stage* reader = factory.createStage("readers.las");
             Stage* reader = factory.createStage("readers.fastlaz");
             if (!reader) {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "FAILED TO CREATE LAS/LAZ READER");
@@ -41,6 +42,7 @@ namespace CustomReader {
             }
             Options readerOptions;
             readerOptions.add("filename", filepath);
+            // readerOptions.add("threads", std::thread::hardware_concurrency());
 
             reader->setOptions(readerOptions);
 

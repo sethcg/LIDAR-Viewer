@@ -18,8 +18,10 @@ PDAL_CREATE_PLUGIN(
     NAME fastlaz
     VERSION 1.0
     SOURCES 
-        CustomLazReader.cpp
+        Header.hpp
+        Header.cpp
         CustomLazReader.hpp
+        CustomLazReader.cpp
     INCLUDES 
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PDAL_INCLUDE_DIRS}
