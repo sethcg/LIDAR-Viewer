@@ -106,8 +106,8 @@ void CubeRenderer::Render(Camera& camera, float globalScale, glm::vec3 globalCol
 }
 
 void CubeRenderer::UpdateBufferSize(uint64_t pointCount) {
-    // cubes.clear();
-    // cubes.reserve(pointCount);
+    cubes.clear();
+    cubes.reserve(pointCount);
 
     instanceCount = 0;
     instanceModels.resize(pointCount);
@@ -120,14 +120,43 @@ void CubeRenderer::UpdateBufferSize(uint64_t pointCount) {
     glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
 }
 
-void CubeRenderer::AddCube(uint64_t index, glm::vec3 position, glm::vec3 color) {
+void CubeRenderer::AddCube(uint64_t index, glm::vec3 position, glm::vec3 color, uint16_t intensity) {
     // ADD CUBE
-    // cubes.emplace_back(position, color);
+    cubes.emplace_back(position, color, intensity);
 
     // UPDATE INSTANCE BUFFERS
     UpdateInstancePosition(index, position);
     UpdateInstanceColor(index, color);
     instanceCount++;
+}
+
+void CubeRenderer::NormalizeColors() {
+    const size_t BIN_COUNT = 65535;
+    std::vector<size_t> histogram(BIN_COUNT, 0);
+    
+    uint16_t min_intensity = UINT16_MAX;
+    uint16_t max_intensity = 0;
+
+    for (uint64_t index = 0; index < instanceCount; ++index) {
+        // BUILD COLOR HISTOGRAM
+        uint16_t intensity = cubes[index].intensity;
+        min_intensity = std::min(min_intensity, cubes[index].intensity);
+        max_intensity = std::max(max_intensity, cubes[index].intensity);
+        histogram[cubes[index].intensity]++;
+    }
+
+    // BUILD CUMULATIVE HISTOGRAM (CUMULATIVE DISTRIBUTION FUNCTION)
+    std::vector<size_t> cumulativeHistogram(BIN_COUNT, 0);
+    cumulativeHistogram[0] = histogram[0];
+    for (size_t i = 1; i < BIN_COUNT; ++i) {
+        cumulativeHistogram[i] = cumulativeHistogram[i - 1] + histogram[i];
+    }
+
+    for (uint64_t index = 0; index < instanceCount; ++index) {
+        float normalizedValue = float(cumulativeHistogram[cubes[index].intensity]) / float(instanceCount);
+        glm::vec3 color = Data::ColorMap(normalizedValue);
+        UpdateInstanceColor(index, color);
+    }
 }
 
 void CubeRenderer::UpdateInstancePosition(uint64_t index, glm::vec3 position) {

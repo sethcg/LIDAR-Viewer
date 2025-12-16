@@ -16,15 +16,18 @@
 #include <Camera.hpp>
 #include <Cube.hpp>
 #include <CubeRenderer.hpp>
+#include <CustomLazHeader.hpp>
 
 namespace CustomReader {
+
+    CustomLazHeader* GetLazHeader(const std::string& filepath, Camera& camera);
 
     void GetPointData(
         const std::string& filepath, 
         Camera& camera,
         CubeRenderer& cubeRenderer,
-        double voxelSize = 0.2f,
-        uint32_t decimationStep = 1
+        double voxelSize = 0.0f,
+        uint32_t decimationStep = 2
     );
 
 }

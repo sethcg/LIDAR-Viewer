@@ -12,10 +12,13 @@ namespace Data {
     struct Cube {
         glm::vec3 position;
         glm::vec3 color;
+
+        uint16_t intensity;
         
-        Cube(const glm::vec3& position, const glm::vec3& color = glm::vec3(1.0f)) {
+        Cube(const glm::vec3& position, const glm::vec3& color, const uint16_t intensity) {
             this->position = position;
             this->color = color;
+            this->intensity = intensity;
         }
     };
 

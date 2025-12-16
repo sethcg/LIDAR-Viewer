@@ -31,8 +31,11 @@ class CubeRenderer {
         void AddCube(
             uint64_t index, 
             glm::vec3 position, 
-            glm::vec3 color = glm::vec3(1.0f)
+            glm::vec3 color,
+            uint16_t intensity
         );
+
+        void NormalizeColors();
 
         void UpdateInstancePosition(uint64_t index, glm::vec3 position);
 

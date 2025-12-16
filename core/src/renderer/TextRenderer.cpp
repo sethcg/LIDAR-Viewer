@@ -106,7 +106,6 @@ namespace TextRenderer {
         SDL_Surface* surface = TTF_RenderText_Blended(textFont, buffer, 0, white);
         if (!surface) return;
 
-        // FORMAT THE SURFACE
         SDL_Surface* convertedSurface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
         SDL_DestroySurface(surface);
 

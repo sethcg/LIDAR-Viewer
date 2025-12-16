@@ -1,13 +1,15 @@
 #pragma once
 
 #include <array>
+#include <iostream>
 #include <unordered_set>
 
 #include <pdal/util/Uuid.hpp>
+#include <pdal/util/Extractor.hpp>
 
 using namespace pdal;
 
-struct Header {
+struct CustomLazHeader {
 
     static const int LegacyReturnCount {5};
     static const int ReturnCount {15};
@@ -28,8 +30,8 @@ struct Header {
     std::string softwareId;
     uint16_t creationDoy;
     uint16_t creationYear;
-    uint16_t headerSize {};            // Same as VLR offset
-    uint16_t& vlrOffset {headerSize};  // Synonym
+    uint16_t headerSize {};            // SAME AS VLR OFFSET
+    uint16_t& vlrOffset {headerSize};  // SYNONYM
     uint32_t pointOffset {};
     uint32_t vlrCount {};
     uint8_t pointFormatBits {};
@@ -61,17 +63,11 @@ struct Header {
     uint64_t ePointCount {};
     std::array<uint64_t, ReturnCount> ePointsByReturn;
 
-    // FILL HEADER CONTENTS FROM BUFFER
-    void fill(const char *buffer, size_t buffersize);
-
-    // VALIDATE HEADER CONTENTS
-    std::vector<std::string> validate(uint64_t fileSize) const;
-
     inline int size() const { 
         return 
-            versionMinor >= 4 ? Header::Size14 : 
-            versionMinor == 3 ? Header::Size13 : 
-            Header::Size12; 
+            versionMinor >= 4 ? Size14 : 
+            versionMinor == 3 ? Size13 : 
+            Size12; 
     }
 
     inline int ebCount() const {
@@ -80,7 +76,7 @@ struct Header {
     }
 
     inline int pointFormat() const {
-        return pointFormatBits & Header::FormatMask; 
+        return pointFormatBits & FormatMask; 
     }
 
     inline bool pointFormatSupported() const {
@@ -120,7 +116,7 @@ struct Header {
     }
     
     inline bool dataCompressed() const { 
-        return pointFormatBits & Header::CompressionMask; 
+        return pointFormatBits & CompressionMask; 
     }
 
     inline uint64_t pointCount() const { 
@@ -128,7 +124,7 @@ struct Header {
     }
 
     inline int maxReturnCount() const { 
-        return versionMinor >= 4 ? Header::ReturnCount : Header::LegacyReturnCount; 
+        return versionMinor >= 4 ? ReturnCount : LegacyReturnCount; 
     }
 
     inline bool versionAtLeast(int major, int minor) const { 
@@ -157,6 +153,68 @@ struct Header {
 
     inline bool hasInfrared() const { 
         return pointFormat() == 8; 
+    }
+
+    inline void fill(const char *buffer, size_t buffersize) {
+        LeExtractor stream(buffer, buffersize);
+
+        stream.get(magic, 4);
+        stream >> fileSourceId;
+        stream >> globalEncoding;
+
+        char guidBuf[Uuid::size()];
+        stream.get(guidBuf, Uuid::size());
+        projectGuid.unpack(guidBuf);
+
+        stream >> versionMajor;
+        stream >> versionMinor;
+        stream.get(systemId, 32);
+        stream.get(softwareId, 32);
+        stream >> creationDoy;
+        stream >> creationYear;
+        stream >> headerSize;
+        stream >> pointOffset;
+        stream >> vlrCount;
+        stream >> pointFormatBits;
+        stream >> pointSize;
+        stream >> legacyPointCount;
+
+        for (uint32_t& pbr : legacyPointsByReturn) {
+            stream >> pbr;
+        }
+
+        stream >> scaleX >> scaleY >> scaleZ;
+        stream >> offsetX >> offsetY >> offsetZ;
+        stream >> maxX >> minX >> maxY >> minY >> maxZ >> minZ;
+        if (versionMinor >= 3) {
+            stream >> waveOffset;
+            if (versionMinor >= 4) {
+                stream >> evlrOffset >> evlrCount >> ePointCount;
+                for (uint64_t& pbr : ePointsByReturn) {
+                    stream >> pbr;
+                }
+            }
+        }
+    }
+
+    inline std::vector<std::string> validate(uint64_t fileSize) {
+        std::vector<std::string> errors;
+        if (magic != "LASF") {
+            errors.push_back("Invalid file signature. Was expecting 'LASF', Check the first four bytes of the file.");
+        }
+        if (!dataCompressed() && (pointOffset > fileSize)) {
+            errors.push_back("Invalid point offset - exceeds file size.");
+        }
+        if (!dataCompressed() && (pointOffset + pointCount() * pointSize > fileSize)) {
+            errors.push_back("Invalid point count: " + std::to_string(pointCount()) + ". Number of points too large for file size.");
+        }
+        if (vlrOffset > fileSize) {
+            errors.push_back("Invalid VLR offset - exceeds file size.");
+        }
+        if (!pointFormatSupported()) {
+            errors.push_back("Unsupported LAS input point format: " + Utils::toString((int)pointFormat()) + ".");
+        }
+        return errors;
     }
 
 };

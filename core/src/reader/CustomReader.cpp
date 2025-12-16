@@ -7,19 +7,69 @@
 #include <thread>
 
 #include <SDL3/SDL.h>
-#include <pdal/StageFactory.hpp>
+#include <pdal/Dimension.hpp>
+#include <pdal/Options.hpp>
 #include <pdal/PointTable.hpp>
 #include <pdal/PointView.hpp>
-#include <pdal/Options.hpp>
-#include <pdal/Dimension.hpp>
+#include <pdal/StageFactory.hpp>
+#include <pdal/Streamable.hpp>
+
+#include <pdal/filters/StreamCallbackFilter.hpp>
+#include <pdal/filters/DecimationFilter.hpp>
+#include <pdal/filters/VoxelCenterNearestNeighborFilter.hpp>
 
 #include <Camera.hpp>
 #include <Cube.hpp>
 #include <CubeRenderer.hpp>
+#include <CustomLazHeader.hpp>
 
 using namespace pdal;
 
 namespace CustomReader {
+
+    CustomLazHeader* GetLazHeader(const std::string& filepath, Camera& camera) {
+        std::ifstream inputStream(filepath, std::ios::binary);
+        if(!(inputStream.is_open() && inputStream.good())) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "FAILED TO OPEN INPUT LAZ FILE STREAM");
+            return nullptr;
+        }
+        inputStream.seekg(0);
+
+        char headerBuffer[CustomLazHeader::Size14];
+        inputStream.read(headerBuffer, CustomLazHeader::Size14);
+        if (inputStream.gcount() < (std::streamsize)CustomLazHeader::Size12) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "FILE SIZE INSUFFICIENT");
+            return nullptr;
+        }
+
+        CustomLazHeader* header = new CustomLazHeader();
+        header->fill(headerBuffer, CustomLazHeader::Size14);
+        
+        // VALIDATE LAZ/LAS HEADER
+        uint64_t fileSize = Utils::fileSize(filepath);
+        StringList errors = header->validate(fileSize);
+        if (errors.size()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", errors.front());
+        }
+
+        // RETRIEVE METADATA
+        glm::vec3 minDistance = glm::vec3(
+            header->minX, 
+            header->minY, 
+            header->minZ
+        );
+        glm::vec3 maxDistance = glm::vec3(
+            header->maxX, 
+            header->maxY, 
+            header->maxZ
+        );
+
+        // UPDATE CAMERA BOUNDING BOX
+        float radius = glm::length(maxDistance - minDistance) * 0.5f;
+        camera.UpdateBounds(glm::vec3(0.0f), radius);
+
+        return header;
+    }
 
     void GetPointData(
         const std::string& filepath, 
@@ -31,25 +81,29 @@ namespace CustomReader {
         try {
             auto start = std::chrono::high_resolution_clock::now();
 
+            CustomLazHeader* header = GetLazHeader(filepath, camera);
+
             StageFactory factory;
 
-            // CREATE CUSTOM LAZ READER
-            // Stage* reader = factory.createStage("readers.las");
-            Stage* reader = factory.createStage("readers.fastlaz");
+            // CUSTOM LAZ READER IS OBSOLETE, (ABOUT 20-25% SLOWER THAN BUILT-IN READER)
+            // TLDR: STREAMCALLBACK FIXED MASSIVE PERFORMANCE LOSS
+            // Stage* reader = factory.createStage("readers.customlaz");
+
+            // CREATE LAS/LAZ READER
+            Stage* reader = factory.createStage("readers.las");
             if (!reader) {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "FAILED TO CREATE LAS/LAZ READER");
                 return;
             }
             Options readerOptions;
             readerOptions.add("filename", filepath);
-            // readerOptions.add("threads", std::thread::hardware_concurrency());
+            readerOptions.add("threads", std::thread::hardware_concurrency());
 
             reader->setOptions(readerOptions);
 
             Stage* lastStage = reader;
 
             // OPTIONAL DECIMATION FILTER
-            // TODO: FIX CUSTOM READER GOES THROUGH ALL POINTS (NO PERFORMANCE GAIN)
             if (decimationStep > 1) {
                 Stage* decimation = factory.createStage("filters.decimation");
                 Options decimationOptions;
@@ -60,95 +114,93 @@ namespace CustomReader {
             }
 
             // OPTIONAL VOXELGRID FILTER
-            // THIS REMOVES OVERLAPPING CUBES (SMALL PERFORMANCE LOSS)
-            if (voxelSize > 0.0) {
-                Stage* voxel = factory.createStage("filters.voxelcenternearestneighbor");
-                Options voxelOptions;
-                voxelOptions.add("cell", voxelSize);
-                voxel->setOptions(voxelOptions);
-                voxel->setInput(*lastStage);
-                lastStage = voxel;
-            }
+            // BROKEN: CANNOT WORK WITH STREAMABLE READERS
+            // if (voxelSize > 0.0) {
+            //     Stage* voxel = factory.createStage("filters.voxelcenternearestneighbor");
+            //     Options voxelOptions;
+            //     voxelOptions.add("cell", voxelSize);
+            //     voxel->setOptions(voxelOptions);
+            //     voxel->setInput(*lastStage);
+            //     lastStage = voxel;
+            // }
+
+            // APPLY COLOR INTERPOLATION
+            // Stage* colorInterpolation = factory.createStage("filters.colorinterp");
+            // Options colorOptions;
+            // colorOptions.add("dimension", "Intensity");         // APPLY COLOR BASED ON INTENSITY VALUES
+            // colorOptions.add("ramp", "pestel_shades");          // COLOR RAMP TO APPLY
+            // // colorOptions.add("clamp", true);
+            // colorOptions.add("mad", true);                      // ENABLE MAD (MEDIAN ABSOLUTE DEVIATION)
+            // colorOptions.add("mad_multiplier", 1.5);            // MAD MULTIPLIER (CONTROL SENSITIVITY)
+            // colorOptions.add("k", 1.0);                         // STANDARD DEVIATION THRESHOLD
+            // // colorOptions.add("minimum", header->minZ);
+            // // colorOptions.add("maximum", header->maxZ);
+            // colorInterpolation->setOptions(colorOptions);
+            // colorInterpolation->setInput(*lastStage);
+            // lastStage = colorInterpolation;
+
+            // CREATE FINAL STREAM CALLBACK (FOR POINT PROCESSING)
+            StreamCallbackFilter callbackFilter;
+            uint64_t index = 0;
+
+            glm::vec3 center = glm::vec3(
+                (header->minX + header->maxX) / 2.0f, 
+                (header->minY + header->maxY) / 2.0f, 
+                (header->minZ + header->maxZ) / 2.0f
+            );
+            callbackFilter.setCallback([&cubeRenderer, &index, &header, center](PointRef& point) -> bool {
+                
+                // POINT POSITION CENTERED AROUND THE (0, 0, 0)
+                double x = point.getFieldAs<double>(Dimension::Id::X);
+                double y = point.getFieldAs<double>(Dimension::Id::Y);
+                double z = point.getFieldAs<double>(Dimension::Id::Z);
+                glm::vec3 position = glm::vec3(x, y, z) - center;
+
+                // NORMALIZED COLOR AROUND (0.0 - 1.0) FOR THE GPU SHADERS
+                glm::vec3 color = glm::vec3(1.0f);
+                if(header->hasColor()) {
+                    color = glm::vec3(
+                        point.getFieldAs<double>(Dimension::Id::Red) / 255.0f,
+                        point.getFieldAs<double>(Dimension::Id::Green) / 255.0f,
+                        point.getFieldAs<double>(Dimension::Id::Blue) / 255.0f
+                    );
+                }
+
+                // ADD CUBE
+                uint16_t intensity = point.getFieldAs<uint16_t>(Dimension::Id::Intensity);
+                cubeRenderer.AddCube(index, position, color, intensity);
+
+                index++;
+
+                // TRUE TO KEEP POINT, FALSE TO DISCARD THE POINT
+                return true;
+            });
+            callbackFilter.setInput(*lastStage);
+
+            // CREATE FIXED POINT TABLE
+            uint64_t pointCount = header->pointCount();
+            FixedPointTable table(pointCount);
+
+            // UPDATE GPU INSTANCE BUFFER SIZES
+            cubeRenderer.Clear();
+            cubeRenderer.UpdateBufferSize(pointCount);
 
             // EXECUTE PIPELINE
-            PointTable table;
-            lastStage->prepare(table);
-            PointViewSet viewSet = lastStage->execute(table);
+            callbackFilter.prepare(table);
+            callbackFilter.execute(table);
 
-            // RETRIEVE METADATA
-            MetadataNode metadata = reader->getMetadata();
-            double minx = metadata.findChild("minx").value<double>();
-            double miny = metadata.findChild("miny").value<double>();
-            double minz = metadata.findChild("minz").value<double>();
-            glm::vec3 minDistance = glm::vec3(minx, miny, minz);
+            // NORMALIZE INTENSITY/COLOR VALUES
+            cubeRenderer.NormalizeColors();
 
-            double maxx = metadata.findChild("maxx").value<double>();
-            double maxy = metadata.findChild("maxy").value<double>();
-            double maxz = metadata.findChild("maxz").value<double>();
-            glm::vec3 maxDistance = glm::vec3(maxx, maxy, maxz);
-
-            // UPDATE CAMERA BOUNDING BOX
-            float radius = glm::length(maxDistance - minDistance) * 0.5f;
-            camera.UpdateBounds(glm::vec3(0.0f), radius);
-
-            // GET POINT COUNT
-            uint64_t pointCount = 0;
-            for (const auto& view : viewSet) pointCount += view->size();
-
-            // MAX NUMBER OF BINS (65535 "uint16_t" SIZE)
-            // LOWER VALUE IS FASTER, BUT LESS PRECISE
-            const size_t BIN_COUNT = 65535;
-            std::vector<size_t> histogram(BIN_COUNT, 0);
-            
-            std::vector<uint16_t> intensities(pointCount);    
-            uint16_t min_intensity = UINT16_MAX;
-            uint16_t max_intensity = 0;
-
-            // FILL POINT DATA
-            uint64_t offset = 0;
-            cubeRenderer.UpdateBufferSize(pointCount);
-            for (const PointViewPtr& view : viewSet) {
-                for (uint64_t index = 0; index < pointCount; ++index) {
-
-                    glm::vec3 position = glm::vec3(
-                        view->getFieldAs<double>(Dimension::Id::X, index),
-                        view->getFieldAs<double>(Dimension::Id::Y, index),
-                        view->getFieldAs<double>(Dimension::Id::Z, index)
-                    );
-                    cubeRenderer.AddCube(index, position);
-
-                    uint16_t intensity = view->getFieldAs<uint16_t>(Dimension::Id::Intensity, index);
-                    intensities[index] = intensity;
-
-                    // BUILD COLOR HISTOGRAM
-                    min_intensity = std::min(min_intensity, intensity);
-                    max_intensity = std::max(max_intensity, intensity);
-                    histogram[intensity]++;
-
-                    ++offset;
-                }
-            }
-            
-            // BUILD CUMULATIVE HISTOGRAM (CUMULATIVE DISTRIBUTION FUNCTION)
-            std::vector<size_t> cumulativeHistogram(BIN_COUNT, 0);
-            cumulativeHistogram[0] = histogram[0];
-            for (size_t i = 1; i < BIN_COUNT; ++i) {
-                cumulativeHistogram[i] = cumulativeHistogram[i - 1] + histogram[i];
-            }
-
-            for (uint64_t i = 0; i < pointCount; ++i) {
-                float normalizedValue = float(cumulativeHistogram[intensities[i]]) / float(pointCount);
-                glm::vec3 color = Data::ColorMap(normalizedValue);
-                cubeRenderer.UpdateInstanceColor(i, color);
-            }
-
+            // CALL GPU UPDATE
             cubeRenderer.UpdateBuffers();
 
             auto end = std::chrono::high_resolution_clock::now();
             double seconds = std::chrono::duration<double>(end - start).count();
+            uint64_t pointsRead = pointCount / decimationStep;
             SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                 "TOTAL POINTS: %llu, FINISHED READING IN %.4f seconds (%llu pts/sec)",
-                pointCount, seconds, static_cast<unsigned long long>(pointCount / seconds));
+                pointsRead, seconds, static_cast<unsigned long long>(pointsRead / seconds));
         }
         catch (const pdal_error& e) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PDAL ERROR WHILE PROCESSING FILE %s: %s", filepath.c_str(), e.what());

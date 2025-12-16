@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <thread>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -15,7 +16,6 @@
 #include <Camera.hpp>
 #include <Cube.hpp>
 #include <CubeRenderer.hpp>
-#include <CustomLargeFileReader.hpp>
 #include <CustomReader.hpp>
 #include <UserInterface.hpp>
 
@@ -119,14 +119,15 @@ namespace UserInterface {
             if (selected) {
                 // READ LAZ FILE DATA
                 appContext->filepath = selected;
-                CustomReader::GetPointData(
-                    appContext->filepath, 
-                    *appContext->camera, 
-                    *appContext->cubeRenderer
-                );
 
-                // TESTING LARGE DATA EXTRACTING (10 MILLION ~= 15000ms)
-                // CustomLargeFileReader::TestCreateCubeDirect(appContext->filepath);
+                // std::thread dataLoadingThread([appContext]() {
+                    CustomReader::GetPointData(
+                        appContext->filepath,
+                        *appContext->camera,
+                        *appContext->cubeRenderer
+                    );
+                // });
+                // dataLoadingThread.detach();
             } else {
                 return;
             }
