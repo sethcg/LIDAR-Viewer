@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <ColorRamp.hpp>
 #include <Cube.hpp>
 #include <RendererHelper.hpp>
 
@@ -35,12 +36,14 @@ class CubeRenderer {
             uint16_t intensity
         );
 
-        void NormalizeColors();
-
         void UpdateInstancePosition(uint64_t index, glm::vec3 position);
 
         void UpdateInstanceColor(uint64_t index, glm::vec3 color);
         
+        void NormalizeColors();
+
+        void UpdateColorRamp(std::vector<glm::vec3> colorRamp);
+
         void Clear();
 
         // ACCESSORS
@@ -48,6 +51,7 @@ class CubeRenderer {
 
     private:
         std::vector<Data::Cube> cubes;
+        std::vector<glm::vec3> colorRamp;
 
         size_t instanceCount = 0;
         std::vector<glm::mat4> instanceModels;

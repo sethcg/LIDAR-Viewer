@@ -82,6 +82,14 @@ namespace UserInterface {
         // GLOBAL SCALE
         ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
 
+        // COLOR RAMP (GRADIENT)
+        if (ImGui::Combo("Gradient", &appContext->selectedColorRampIndex, Data::ColorRampNames, IM_ARRAYSIZE(Data::ColorRampNames))) {
+            Data::ColorRampType selectedRamp = static_cast<Data::ColorRampType>(appContext->selectedColorRampIndex);
+            std::vector<glm::vec3> &colorRamp = Data::ColorRamp::GetColorRamp(selectedRamp);
+            appContext->cubeRenderer->UpdateColorRamp(colorRamp);
+            appContext->cubeRenderer->UpdateBuffers();
+        }
+
     }
 
     void DrawCameraSettings(Application::AppContext* appContext) {

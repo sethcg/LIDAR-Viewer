@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <Camera.hpp>
+#include <ColorRamp.hpp>
 #include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
@@ -17,6 +18,9 @@ CubeRenderer::CubeRenderer() { Init(); };
 CubeRenderer::~CubeRenderer() { Shutdown(); }
 
 inline void CubeRenderer::Init() {
+    // DEFAULT COLOR RAMP
+    colorRamp = Data::ColorRamp::HeatMap;
+
     std::string vertexSource = LoadTextFile("../assets/shaders/cube/cube.vert");
     std::string fragmentSource = LoadTextFile("../assets/shaders/cube/cube.frag");
 
@@ -130,6 +134,14 @@ void CubeRenderer::AddCube(uint64_t index, glm::vec3 position, glm::vec3 color, 
     instanceCount++;
 }
 
+void CubeRenderer::UpdateInstancePosition(uint64_t index, glm::vec3 position) {
+    instanceModels[index] = glm::translate(glm::mat4(1.0f), position);
+}
+
+void CubeRenderer::UpdateInstanceColor(uint64_t index, glm::vec3 color) {
+    instanceColors[index] = color;
+}
+
 void CubeRenderer::NormalizeColors() {
     const size_t BIN_COUNT = 65535;
     std::vector<size_t> histogram(BIN_COUNT, 0);
@@ -154,17 +166,10 @@ void CubeRenderer::NormalizeColors() {
 
     for (uint64_t index = 0; index < instanceCount; ++index) {
         float normalizedValue = float(cumulativeHistogram[cubes[index].intensity]) / float(instanceCount);
-        glm::vec3 color = Data::ColorMap(normalizedValue);
+        cubes[index].normalized_intensity = normalizedValue;
+        glm::vec3 color = Data::ColorMap(normalizedValue, colorRamp);
         UpdateInstanceColor(index, color);
     }
-}
-
-void CubeRenderer::UpdateInstancePosition(uint64_t index, glm::vec3 position) {
-    instanceModels[index] = glm::translate(glm::mat4(1.0f), position);
-}
-
-void CubeRenderer::UpdateInstanceColor(uint64_t index, glm::vec3 color) {
-    instanceColors[index] = color;
 }
 
 void CubeRenderer::UpdateBuffers() {
@@ -173,6 +178,14 @@ void CubeRenderer::UpdateBuffers() {
 
     glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
     glBufferSubData(GL_ARRAY_BUFFER, 0, instanceCount * sizeof(glm::vec3), instanceColors.data());
+}
+
+void CubeRenderer::UpdateColorRamp(std::vector<glm::vec3> colorRamp) {
+    this->colorRamp = colorRamp;
+    for (uint64_t index = 0; index < instanceCount; ++index) {
+        glm::vec3 color = Data::ColorMap(cubes[index].normalized_intensity, colorRamp);
+        UpdateInstanceColor(index, color);
+    }
 }
 
 void CubeRenderer::Clear() {

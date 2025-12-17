@@ -8,6 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <Camera.hpp>
+#include <ColorRamp.hpp>
 #include <CubeRenderer.hpp>
 
 #define WINDOW_WIDTH 1280
@@ -27,12 +28,16 @@ namespace Application {
         float globalScale;
         glm::vec3 globalColor;
 
+        int selectedColorRampIndex;
+
         std::unique_ptr<Camera> camera;
         std::unique_ptr<CubeRenderer> cubeRenderer;
 
         AppContext() {
             filepath = "";
             
+            selectedColorRampIndex = 0;
+
             globalScale = 0.05f;
             globalColor = glm::vec3(1.0f);
         }

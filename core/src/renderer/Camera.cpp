@@ -66,12 +66,16 @@ void Camera::ProcessKeyboard(float deltaTime) {
     if (!keystate[SDL_SCANCODE_W] &&
         !keystate[SDL_SCANCODE_S] && 
         !keystate[SDL_SCANCODE_A] && 
-        !keystate[SDL_SCANCODE_D]) {
+        !keystate[SDL_SCANCODE_D] && 
+        !keystate[SDL_SCANCODE_SPACE]) {
         return;
     }
 
     glm::vec3 strafeDirection = glm::cross(lookDirection, cameraUpDirection);
     glm::vec3 moveDirection(0.0f);
+
+    // MOVE UP WITH SPACEBAR
+    if (keystate[SDL_SCANCODE_SPACE]) moveDirection += cameraUpDirection;
 
     // MOVE FORWARD/BACKWARD (DEPENDING ON FACING DIRECTION)
     if (keystate[SDL_SCANCODE_W]) moveDirection += lookDirection;

@@ -13,10 +13,7 @@
 #include <pdal/PointView.hpp>
 #include <pdal/StageFactory.hpp>
 #include <pdal/Streamable.hpp>
-
 #include <pdal/filters/StreamCallbackFilter.hpp>
-#include <pdal/filters/DecimationFilter.hpp>
-#include <pdal/filters/VoxelCenterNearestNeighborFilter.hpp>
 
 #include <Camera.hpp>
 #include <Cube.hpp>
