@@ -17,11 +17,13 @@ class Camera;
 
 class CubeRenderer {
     public:
-        CubeRenderer();
-        ~CubeRenderer();
+        // CONSTRUCTOR / DESTRUCTOR
+        CubeRenderer() = default;
+        ~CubeRenderer() { Shutdown(); }
 
-        inline void Init();
-        inline void Shutdown();
+        void Init(const std::vector<glm::vec3>& ramp);
+
+        void Shutdown();
 
         void Render(Camera& camera, float globalScale, glm::vec3 globalColor);
 
@@ -29,12 +31,7 @@ class CubeRenderer {
 
         void UpdateBuffers();
 
-        void AddCube(
-            uint64_t index, 
-            glm::vec3 position, 
-            glm::vec3 color,
-            uint16_t intensity
-        );
+        void AddCube(glm::vec3 position, glm::vec3 color, uint16_t intensity);
 
         void UpdateInstancePosition(uint64_t index, glm::vec3 position);
 
@@ -42,7 +39,7 @@ class CubeRenderer {
         
         void NormalizeColors();
 
-        void UpdateColorRamp(std::vector<glm::vec3> colorRamp);
+        void UpdateColorRamp(const std::vector<glm::vec3>& ramp);
 
         void Clear();
 
@@ -53,7 +50,7 @@ class CubeRenderer {
         std::vector<Data::Cube> cubes;
         std::vector<glm::vec3> colorRamp;
 
-        size_t instanceCount = 0;
+        // GPU MODEL/COLOR BUFFERS
         std::vector<glm::mat4> instanceModels;
         std::vector<glm::vec3> instanceColors;
 
@@ -63,7 +60,7 @@ class CubeRenderer {
         GLuint ebo = 0;
         GLuint instanceVBO = 0;
         GLuint instanceColorVBO = 0;
-        GLuint shaderProgram = 0;
+        GLuint cubeShader = 0;
 
         // SHADER UNIFORMS
         GLint uViewProjectionLocation = -1;

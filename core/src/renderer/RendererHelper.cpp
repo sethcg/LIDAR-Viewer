@@ -9,7 +9,7 @@
 
 namespace Renderer {
 
-    std::string LoadTextFile(const char* filepath) {
+    std::string LoadTextFile(const std::string& filepath) {
         std::ifstream file(filepath);
         if (!file.is_open()) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load file: %s", filepath);
@@ -38,17 +38,23 @@ namespace Renderer {
         return shader;
     }
 
-    GLuint CreateShaderProgram(GLuint vertexShader, GLuint fragmentShader) {
-        GLuint program = glCreateProgram();
-        glAttachShader(program, vertexShader);
-        glAttachShader(program, fragmentShader);
-        glLinkProgram(program);
+    GLuint CreateShaderProgramFromFiles(const std::string& vertexPath, const std::string& fragmentPath) {
+        std::string vertexSource   = Renderer::LoadTextFile(vertexPath);
+        std::string fragmentSource = Renderer::LoadTextFile(fragmentPath);
+
+        GLuint vertexShader   = Renderer::CreateShader(vertexSource, GL_VERTEX_SHADER);
+        GLuint fragmentShader = Renderer::CreateShader(fragmentSource, GL_FRAGMENT_SHADER);
+
+        GLuint shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
 
         GLint success;
-        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
         if (!success) {
             char infoLog[512];
-            glGetProgramInfoLog(program, 512, nullptr, infoLog);
+            glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SHADER PROGRAM LINK ERROR: %s", infoLog);
         }
 
@@ -56,7 +62,7 @@ namespace Renderer {
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
 
-        return program;
+        return shaderProgram;
     }
 
 }

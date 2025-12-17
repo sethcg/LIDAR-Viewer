@@ -138,14 +138,13 @@ namespace CustomReader {
 
             // CREATE FINAL STREAM CALLBACK (FOR POINT PROCESSING)
             StreamCallbackFilter callbackFilter;
-            uint64_t index = 0;
 
             glm::vec3 center = glm::vec3(
                 (header->minX + header->maxX) / 2.0f, 
                 (header->minY + header->maxY) / 2.0f, 
                 (header->minZ + header->maxZ) / 2.0f
             );
-            callbackFilter.setCallback([&cubeRenderer, &index, &header, center](PointRef& point) -> bool {
+            callbackFilter.setCallback([&cubeRenderer, &header, center](PointRef& point) -> bool {
                 
                 // POINT POSITION CENTERED AROUND THE (0, 0, 0)
                 double x = point.getFieldAs<double>(Dimension::Id::X);
@@ -165,10 +164,8 @@ namespace CustomReader {
 
                 // ADD CUBE
                 uint16_t intensity = point.getFieldAs<uint16_t>(Dimension::Id::Intensity);
-                cubeRenderer.AddCube(index, position, color, intensity);
-
-                index++;
-
+                cubeRenderer.AddCube(position, color, intensity);
+                
                 // TRUE TO KEEP POINT, FALSE TO DISCARD THE POINT
                 return true;
             });

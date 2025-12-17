@@ -9,10 +9,10 @@
 
 namespace Renderer {
 
-    std::string LoadTextFile(const char* filepath);
+    std::string LoadTextFile(const std::string& filepath);
 
     GLuint CreateShader(const std::string& source, GLenum type);
 
-    GLuint CreateShaderProgram(GLuint vertexShader, GLuint fragmentShader);
+    GLuint CreateShaderProgramFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
 
 }

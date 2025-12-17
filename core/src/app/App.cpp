@@ -12,6 +12,7 @@
 #include <App.hpp>
 #include <AppContext.hpp>
 #include <Camera.hpp>
+#include <ColorRamp.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
 #include <TextRenderer.hpp>
@@ -42,11 +43,14 @@ namespace Application {
         if (!CreateGLContext(false)) return SDL_APP_FAILURE;
 
         appContext.camera = std::make_unique<Camera>(width, height);
+
         appContext.cubeRenderer = std::make_unique<CubeRenderer>();
+        appContext.cubeRenderer->Init(Data::ColorRamp::HeatMap);
 
         TTF_Init();
-        TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18);
-        TextRenderer::Init(textFont);
+        TTF_Font* font = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18);
+        appContext.textRenderer = std::make_unique<TextRenderer>();
+        appContext.textRenderer->Init(font);
 
         // INITIALIZE IMGUI
         IMGUI_CHECKVERSION();
@@ -102,8 +106,8 @@ namespace Application {
             appContext.globalColor
         );
 
-        TextRenderer::UpdateFPS();
-        TextRenderer::Render(width, height);
+        appContext.textRenderer->UpdateFPS();
+        appContext.textRenderer->Render(width, height);
     }
 
     SDL_AppResult App::Frame() {
@@ -130,8 +134,6 @@ namespace Application {
     }
 
     void App::Shutdown() {
-        TextRenderer::Shutdown();
-
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
         ImGui::DestroyContext();
