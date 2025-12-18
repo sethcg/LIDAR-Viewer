@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <vector>
 #include <string>
@@ -24,7 +25,7 @@ namespace Application {
 
     struct AppContext {
         std::string filepath;
-
+        
         float globalScale;
 
         ImFont* fontBold;
@@ -33,6 +34,9 @@ namespace Application {
         std::unique_ptr<Camera> camera;
         std::unique_ptr<CubeRenderer> cubeRenderer;
         std::unique_ptr<TextRenderer> textRenderer;
+
+        std::atomic<bool> isReadingFlag { false };
+        std::atomic<bool> doneReadingFlag { false };
 
         AppContext() {
             filepath = "";

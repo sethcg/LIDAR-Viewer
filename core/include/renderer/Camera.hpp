@@ -44,7 +44,7 @@ class Camera {
 
         // ORBIT CAMERA ROTATION
         float angle = 0.0f;
-        float rotationSpeed = 30.0f;
+        float rotationSpeed = 15.0f;
 
         // ORBIT CAMERA ZOOM
         float zoom = 1.0f;

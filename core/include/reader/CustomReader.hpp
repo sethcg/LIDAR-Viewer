@@ -19,11 +19,11 @@
 
 namespace CustomReader {
 
-    CustomLazHeader* GetLazHeader(const std::string& filepath, Camera& camera);
+    CustomLazHeader* GetLazHeader(const std::string& filepath);
 
-    void GetPointData(
-        const std::string& filepath, 
-        Camera& camera,
+    void ReadPointData(
+        const std::string& filepath,
+        CustomLazHeader& header,
         CubeRenderer& cubeRenderer,
         uint64_t decimationStep = 2
     );

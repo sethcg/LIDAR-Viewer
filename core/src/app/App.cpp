@@ -109,6 +109,16 @@ namespace Application {
             appContext.globalScale
         );
 
+        // UPDATE THE GPU BUFFERS ONCE WHEN DONE READING DATA
+        if (appContext.doneReadingFlag.load(std::memory_order_acquire)) {
+            // RESET DATA READING FLAGS
+            appContext.isReadingFlag.store(false, std::memory_order_release);
+            appContext.doneReadingFlag.store(false, std::memory_order_release);
+
+            appContext.cubeRenderer->NormalizeIntensities();
+            appContext.cubeRenderer->UpdateBuffers();
+        }
+
         appContext.textRenderer->UpdateFPS();
         appContext.textRenderer->Render(width, height);
     }

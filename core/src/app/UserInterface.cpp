@@ -115,6 +115,8 @@ namespace UserInterface {
             const float selectButtonWidth = ImGui::GetContentRegionAvail().x - closeButtonSize.x - buttonSpacing;
             const char* selectButtonLabel = appContext->filepath.empty() ? "Select File..." : appContext->filepath.c_str();
 
+            bool isButtonDisabled = appContext->isReadingFlag.load(std::memory_order_acquire);
+            ImGui::BeginDisabled(isButtonDisabled);
             if (ImGui::Button("##SELECT_FILE_BUTTON", ImVec2(selectButtonWidth, selectButtonHeight))) {
                 const char* filters[] = { "*.las", "*.laz" };
                 const char* selected = tinyfd_openFileDialog(
@@ -127,15 +129,34 @@ namespace UserInterface {
                 if (!selected) return;
                 appContext->filepath = selected;
 
-                // READ LAS/LAZ FILE DATA
-                // std::thread dataLoadingThread([appContext]() {
-                    CustomReader::GetPointData(
-                        appContext->filepath,
-                        *appContext->camera,
-                        *appContext->cubeRenderer
+                CustomLazHeader* header = CustomReader::GetLazHeader(appContext->filepath);
+
+                // UPDATE CAMERA BOUNDING BOX
+                glm::vec3 minDistance = glm::vec3(header->minX, header->minY, header->minZ);
+                glm::vec3 maxDistance = glm::vec3(header->maxX, header->maxY, header->maxZ);
+                float radius = glm::length(maxDistance - minDistance) * 0.5f;
+                appContext->camera->UpdateBounds(glm::vec3(0.0f), radius);
+
+                // UPDATE GPU INSTANCE BUFFER SIZES
+                appContext->cubeRenderer->Clear();
+                appContext->cubeRenderer->UpdateBufferSize(header->pointCount());
+
+                // READ LAS/LAZ FILE DATA (SEPERATE THREAD)
+                std::thread dataLoadingThread([appContext, header]() {
+                    appContext->isReadingFlag.store(true, std::memory_order_release);
+                    
+                    // NOTE: CANNOT UPDATE OPENGL BUFFERS OUTSIDE OF MAIN THREAD
+                    uint64_t decimationStep = 2;
+                    CustomReader::ReadPointData(
+                        appContext->filepath, 
+                        *header, 
+                        *appContext->cubeRenderer, 
+                        decimationStep
                     );
-                // });
-                // dataLoadingThread.detach();
+
+                    appContext->doneReadingFlag.store(true, std::memory_order_release);
+                });
+                dataLoadingThread.detach();
             }
 
             // SELECTION BUTTON LABEL (LEFT-ALIGNED)
@@ -150,8 +171,10 @@ namespace UserInterface {
             drawList->AddText(ImVec2(textX, textY), ImGui::GetColorU32(ImGuiCol_Text), selectButtonLabel);
             drawList->PopClipRect();
 
+            ImGui::EndDisabled();
+
             ImGui::SameLine(0.0f, buttonSpacing);
-            ImGui::BeginDisabled(appContext->filepath.empty());
+            ImGui::BeginDisabled(appContext->filepath.empty() || isButtonDisabled);
 
             // FILE DESELECT BUTTON
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
@@ -186,7 +209,7 @@ namespace UserInterface {
     void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
         CreateControlSection("Orbital Camera", false, appContext, [&]() {
             // CAMERA ROTATION SPEED
-            ImGui::SliderFloat("Rotation Speed", &appContext->camera->GetRotationSpeed(), 0.0f, 300.0f);
+            ImGui::SliderFloat("Rotation Speed", &appContext->camera->GetRotationSpeed(), 0.0f, 50.0f);
             
             // CAMERA ZOOM
             ImGui::SliderFloat("Zoom", 

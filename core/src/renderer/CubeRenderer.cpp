@@ -193,7 +193,15 @@ void CubeRenderer::BuildColorLUT(Data::ColorRampType rampType) {
 }
 
 void CubeRenderer::Clear() {
+    // CLEAR CPU INSTANCE INFORMATION
     cubes.clear();
     instanceModels.clear();
     instanceIntensities.clear();
+
+    // FLUSH GPU BUFFERS
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceIntensityVBO);
+    glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 }
