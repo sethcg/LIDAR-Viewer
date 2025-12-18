@@ -25,111 +25,110 @@ namespace UserInterface {
 
     void SetCustomTheme() {
         ImGuiStyle& style = ImGui::GetStyle();
-        style.WindowRounding = 6.0f;
+        ImVec4* colors = style.Colors;
+        ImGui::StyleColorsDark();
+
+        // ROUNDING
+        style.WindowRounding = 4.0f;
         style.FrameRounding = 4.0f;
         style.ChildRounding = 6.0f;
         style.PopupRounding = 4.0f;
         style.GrabRounding = 4.0f;
         style.ScrollbarRounding = 6.0f;
+
+        // WINDOW
         style.WindowBorderSize = 0.0f;
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f);    // WINDOW TITLE CENTERED
+        
         style.ItemSpacing = ImVec2(8.0f, 6.0f);
-        style.FramePadding = ImVec2(10.0f, 6.0f);
         style.ItemInnerSpacing = ImVec2(6.0f, 4.0f);
-        style.IndentSpacing = 20.0f;
+        style.ScrollbarSize = 18.0f;
+        style.FramePadding = ImVec2(10.0f, 6.0f);
         style.FrameBorderSize = 0.0f;
-        style.WindowTitleAlign = ImVec2(0.5f, 0.5f);        // WINDOW TITLE CENTERED
-        style.WindowMenuButtonPosition = ImGuiDir_None;     // WINDOW NO COLLAPSE BUTTON
-        style.ScrollbarSize = 12.0f;
         style.GrabMinSize = 10.0f;
 
-        ImVec4* colors = style.Colors;
-        ImGui::StyleColorsDark();
+        // CALCULATE ACCENT VALUES
+        // glm::vec3 AccentBase = glm::vec3(0.000f, 0.729f, 0.380f);   // GREEN
+        // glm::vec3 AccentBase = glm::vec3(0.608f, 0.000f, 0.620f);   // VIOLET
+        glm::vec3 AccentBase = glm::vec3(0.000f, 0.621f, 0.464f);   // SEA-GREEN
+        glm::vec3 AccentDark = AccentBase * 0.90f;
+        glm::vec3 AccentLight = AccentBase * 1.15f;
 
-        colors[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.22f, 0.40f, 1.0f);
-        colors[ImGuiCol_TitleBgActive] = ImVec4(0.10f, 0.22f, 0.40f, 1.0f);
+        // TEXT
+        colors[ImGuiCol_Text]                       = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+        colors[ImGuiCol_TextDisabled]               = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
 
-        colors[ImGuiCol_Button] = ImVec4(0.12f, 0.15f, 0.2f, 1.0f);
-        colors[ImGuiCol_ButtonHovered] = ImVec4(0.30f, 0.35f, 0.40f, 1.0f);
-        colors[ImGuiCol_ButtonActive] = ImVec4(0.40f, 0.45f, 0.50f, 1.0f);
+        // TITLE (PANEL)
+        colors[ImGuiCol_TitleBg]                    = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
+        colors[ImGuiCol_TitleBgActive]              = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
+        colors[ImGuiCol_TitleBgCollapsed]           = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
 
-        colors[ImGuiCol_FrameBg] = ImVec4(0.12f, 0.15f, 0.2f, 1.0f);
-        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.30f, 0.35f, 0.40f, 1.0f);
-        colors[ImGuiCol_FrameBgActive] = ImVec4(0.40f, 0.45f, 0.50f, 1.0f);
+        // WINDOW BACKGROUNDS
+        colors[ImGuiCol_WindowBg]                   = ImVec4(0.06f, 0.06f, 0.06f, 0.95f);
+        colors[ImGuiCol_ChildBg]                    = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_PopupBg]                    = ImVec4(0.08f, 0.08f, 0.08f, 0.95f);
+
+        // HEADERS
+        colors[ImGuiCol_Header]                     = ImVec4(AccentDark.r, AccentDark.g, AccentDark.b, 0.31f);
+        colors[ImGuiCol_HeaderHovered]              = ImVec4(AccentDark.r, AccentDark.g, AccentDark.b, 0.80f);
+        colors[ImGuiCol_HeaderActive]               = ImVec4(AccentDark.r, AccentDark.g, AccentDark.b, 0.65f);
+
+        // SLIDERS / FRAMES
+        colors[ImGuiCol_FrameBg]                    = ImVec4(0.16f, 0.16f, 0.16f, 0.54f);
+        colors[ImGuiCol_FrameBgHovered]             = ImVec4(0.26f, 0.26f, 0.26f, 0.40f);
+        colors[ImGuiCol_FrameBgActive]              = ImVec4(0.26f, 0.26f, 0.26f, 0.67f);
+
+        colors[ImGuiCol_SliderGrab]                 = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
+        colors[ImGuiCol_SliderGrabActive]           = ImVec4(AccentLight.r, AccentLight.g, AccentLight.b, 1.00f);
+
+        // BUTTONS
+        colors[ImGuiCol_Button]                     = ImVec4(0.16f, 0.16f, 0.16f, 0.54f);
+        colors[ImGuiCol_ButtonHovered]              = ImVec4(0.26f, 0.26f, 0.26f, 0.40f);
+        colors[ImGuiCol_ButtonActive]               = ImVec4(0.26f, 0.26f, 0.26f, 0.67f);
+
+        // CHECK MARKS
+        colors[ImGuiCol_CheckMark]                  = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+
+        // SCROLLBAR
+        colors[ImGuiCol_ScrollbarBg]                = ImVec4(0.25f, 0.25f, 0.25f, 0.60f);
+        colors[ImGuiCol_ScrollbarGrab]              = ImVec4(0.53f, 0.53f, 0.53f, 0.30f);
+        colors[ImGuiCol_ScrollbarGrabHovered]       = ImVec4(0.53f, 0.53f, 0.53f, 0.40f);
+        colors[ImGuiCol_ScrollbarGrabActive]        = ImVec4(0.53f, 0.53f, 0.53f, 0.60f);
+
+        // RESIZE
+        colors[ImGuiCol_ResizeGrip]                 = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 0.20f);
+        colors[ImGuiCol_ResizeGripHovered]          = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 0.67f);
+        colors[ImGuiCol_ResizeGripActive]           = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 0.95f);
+
+        // SEPERATORS (WINDOW RESIZE ALSO)
+        style.Colors[ImGuiCol_Separator]            = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
+        style.Colors[ImGuiCol_SeparatorHovered]     = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 0.78f);
+        style.Colors[ImGuiCol_SeparatorActive]      = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
     }
 
-    void RenderMainPanel(Application::AppContext* appContext) {
-        ImVec2 minSize(float(MINIMUM_WINDOW_WIDTH) / 2.0f, float(MINIMUM_WINDOW_HEIGHT) / 2.0f);
-        ImVec2 maxSize(FLT_MAX, FLT_MAX);
-        ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
-        ImGui::Begin("##panel");
+    void DrawFileSelectionSettings(Application::AppContext* appContext) {
+        CreateControlSection(appContext, "File", [&]() {
+            ImGuiStyle& style = ImGui::GetStyle();
 
-        DrawFileSelection(appContext);
-        DrawCubeSettings(appContext);
-        DrawCameraSettings(appContext);
+            const float buttonSpacing = 4.0f;
+            const float selectButtonHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2.0f;
+            const ImVec2 closeButtonSize = ImVec2(selectButtonHeight, selectButtonHeight);
+            const float selectButtonWidth = ImGui::GetContentRegionAvail().x - closeButtonSize.x - buttonSpacing;
+            const char* selectButtonLabel = appContext->filepath.empty() ? "Select File..." : appContext->filepath.c_str();
 
-        ImGui::End();
-    }
-
-    void DrawCubeSettings(Application::AppContext* appContext) {
-        // TITLE
-        ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-        ImGui::Text("Cube");
-        ImGui::PopStyleColor();
-
-        // GLOBAL COLOR (TINT)
-        ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
-
-        // GLOBAL SCALE
-        ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
-
-        // COLOR RAMP (GRADIENT)
-        if (ImGui::Combo("Gradient", &selectedColorRampIndex, Data::ColorRampNames, IM_ARRAYSIZE(Data::ColorRampNames))) {
-            Data::ColorRampType selectedRamp = static_cast<Data::ColorRampType>(selectedColorRampIndex);
-            std::vector<glm::vec3> &colorRamp = Data::ColorRamp::GetColorRamp(selectedRamp);
-            appContext->cubeRenderer->UpdateColorRamp(colorRamp);
-            appContext->cubeRenderer->UpdateBuffers();
-        }
-
-    }
-
-    void DrawCameraSettings(Application::AppContext* appContext) {
-        // TITLE
-        ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-        ImGui::Text("Camera");
-        ImGui::PopStyleColor();
-
-        // CAMERA ROTATION SPEED
-        ImGui::SliderFloat("Rotation Speed", 
-            &appContext->camera->GetRotationSpeed(), 
-            0.0f, 
-            300.0f
-        );
-
-        // CAMERA ZOOM
-        ImGui::SliderFloat("Zoom", 
-            &appContext->camera->GetTargetZoom(), 
-            appContext->camera->GetMinZoom(), 
-            appContext->camera->GetMaxZoom());
-
-    }
-
-    void DrawFileSelection(Application::AppContext* appContext) {
-        if (ImGui::Button("Select File", ImVec2(0.0f, 28.0f))) {
-            const char* filters[] = { "*.las", "*.laz" };
-            const char* selected = tinyfd_openFileDialog(
-                "Select a file", "",
-                2, // NUMBER OF FILTERS
-                filters,
-                ".LAZ and .LAS files",
-                0 // DO NOT ALLOW MULTIPLE SELECTIONS
-            );
-            if (selected) {
-                // READ LAZ FILE DATA
+            if (ImGui::Button("##SELECT_FILE_BUTTON", ImVec2(selectButtonWidth, selectButtonHeight))) {
+                const char* filters[] = { "*.las", "*.laz" };
+                const char* selected = tinyfd_openFileDialog(
+                    "Select a file", "",
+                    2, // NUMBER OF FILTERS
+                    filters,
+                    ".LAZ and .LAS files",
+                    0 // DO NOT ALLOW MULTIPLE SELECTIONS
+                );
+                if (!selected) return;
                 appContext->filepath = selected;
 
+                // READ LAS/LAZ FILE DATA
                 // std::thread dataLoadingThread([appContext]() {
                     CustomReader::GetPointData(
                         appContext->filepath,
@@ -138,45 +137,78 @@ namespace UserInterface {
                     );
                 // });
                 // dataLoadingThread.detach();
-            } else {
-                return;
             }
-        }
-        ImGui::SameLine(0.0f, 10.0f);
-        UserInterface::FileSelectLabel(appContext->filepath.c_str(), ImVec2(0.0f, 28.0f), ImVec2(8.0f, 4.0f));
+
+            // SELECTION BUTTON LABEL (LEFT-ALIGNED)
+            ImVec2 textSize = ImGui::CalcTextSize(selectButtonLabel);
+            ImVec2 buttonPos = ImGui::GetItemRectMin();
+            float textX = buttonPos.x + style.FramePadding.x;
+            float textY = buttonPos.y + (selectButtonHeight - textSize.y) * 0.5f;
+            ImGui::GetWindowDrawList()->AddText(ImVec2(textX, textY), ImGui::GetColorU32(ImGuiCol_Text), selectButtonLabel);
+
+            ImGui::SameLine(0.0f, buttonSpacing);
+            ImGui::BeginDisabled(appContext->filepath.empty());
+
+            // FILE DESELECT BUTTON
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.70f, 0.20f, 0.20f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.85f, 0.25f, 0.25f, 1.0f));
+
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, style.FramePadding.y));
+            if (ImGui::Button("X")) {
+                appContext->filepath.clear();
+                appContext->cubeRenderer->Clear();
+            }
+            ImGui::PopStyleVar();
+
+            ImGui::PopStyleColor(3);
+            ImGui::EndDisabled();
+        });
     }
 
-    void FileSelectLabel(const char* text, ImVec2 size, ImVec2 padding) {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (!window) return;
+    void DrawCubeSettings(Application::AppContext* appContext) {
+        CreateControlSection(appContext, "Cube", [&]() {
+            // GLOBAL COLOR (TINT)
+            ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
 
-        ImGuiStyle& style = ImGui::GetStyle();
-        ImVec4 bgColor = style.Colors[ImGuiCol_Button];
-        ImVec4 textColor = style.Colors[ImGuiCol_Text];
+            // GLOBAL SCALE
+            ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
 
-        ImVec2 textPos = ImGui::GetCursorScreenPos();
-        ImVec2 textSize = ImGui::CalcTextSize(text);
+            // COLOR RAMP (GRADIENT)
+            if (ImGui::Combo("Gradient", &selectedColorRampIndex, Data::ColorRampNames, IM_ARRAYSIZE(Data::ColorRampNames))) {
+                Data::ColorRampType selectedRamp = static_cast<Data::ColorRampType>(selectedColorRampIndex);
+                appContext->cubeRenderer->UpdateColorRamp(Data::ColorRamp::GetColorRamp(selectedRamp));
+                appContext->cubeRenderer->UpdateBuffers();
+            }
+        });
+    }
 
-        ImVec2 bgMax = ImVec2(
-            textPos.x + ImGui::GetContentRegionAvail().x,
-            textPos.y + std::fmax(textSize.y, size.y)
-        );
+    void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
+        CreateControlSection(appContext, "Orbital Camera", [&]() {
+            // CAMERA ROTATION SPEED
+            ImGui::SliderFloat("Rotation Speed", &appContext->camera->GetRotationSpeed(), 0.0f, 300.0f);
+            
+            // CAMERA ZOOM
+            ImGui::SliderFloat("Zoom", 
+                &appContext->camera->GetTargetZoom(), 
+                appContext->camera->GetMinZoom(), 
+                appContext->camera->GetMaxZoom()
+            );
+        });
+    }
 
-        ImGui::GetWindowDrawList()->AddRectFilled(
-            textPos, bgMax,
-            ImGui::ColorConvertFloat4ToU32(bgColor),
-            style.FrameRounding
-        );
+    void RenderMainPanel(Application::AppContext* appContext) {
+        ImVec2 minSize(float(MINIMUM_WINDOW_WIDTH) / 2.0f, float(MINIMUM_WINDOW_HEIGHT) / 2.0f);
+        ImVec2 maxSize(FLT_MAX, FLT_MAX);
+        ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
+        ImGui::Begin("##CONTROL_PANEL", nullptr, ImGuiWindowFlags_NoCollapse);
 
-        ImVec2 clipMin = ImVec2(textPos.x + padding.x, textPos.y);
-        ImVec2 clipMax = ImVec2(bgMax.x - padding.x, bgMax.y);
+        DrawFileSelectionSettings(appContext);
+        DrawCubeSettings(appContext);
+        DrawOrbitalCameraSettings(appContext);
 
-        window->DrawList->PushClipRect(clipMin, clipMax, true);
-        
-        ImGui::SetCursorScreenPos(clipMin);
-        ImGui::TextColored(textColor, "%s", text);
-
-        window->DrawList->PopClipRect();
+        ImGui::End();
     }
 
 }

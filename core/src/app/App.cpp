@@ -48,13 +48,17 @@ namespace Application {
         appContext.cubeRenderer->Init(Data::ColorRamp::HeatMap);
 
         TTF_Init();
-        TTF_Font* font = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18);
+        TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18.0f);
         appContext.textRenderer = std::make_unique<TextRenderer>();
-        appContext.textRenderer->Init(font);
+        appContext.textRenderer->Init(textFont);
 
         // INITIALIZE IMGUI
         IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
+        ImGui::CreateContext(); 
+        ImGuiIO& io = ImGui::GetIO();
+        appContext.fontBold = io.Fonts->AddFontFromFileTTF("../assets/fonts/Roboto-Bold.ttf", 16.0f);
+        appContext.fontRegular = io.Fonts->AddFontFromFileTTF("../assets/fonts/Roboto-Regular.ttf", 16.0f);
+        io.FontDefault = appContext.fontRegular;
         UserInterface::SetCustomTheme();
 
         ImGui_ImplSDL3_InitForOpenGL(window, glContext);

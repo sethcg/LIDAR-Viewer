@@ -28,6 +28,9 @@ namespace Application {
         float globalScale;
         glm::vec3 globalColor;
 
+        ImFont* fontBold;
+        ImFont* fontRegular;
+
         std::unique_ptr<Camera> camera;
         std::unique_ptr<CubeRenderer> cubeRenderer;
         std::unique_ptr<TextRenderer> textRenderer;
