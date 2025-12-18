@@ -5,15 +5,26 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/common.hpp>
 
 #include <ColorRamp.hpp>
-#include <Cube.hpp>
 #include <RendererHelper.hpp>
 
 // FORWARD DECLARATION
 class Camera;
+
+struct CubeInstance {
+    glm::vec3 position;
+    uint16_t intensity;
+    float normalized_intensity = 0.0f;
+    
+    CubeInstance(const glm::vec3& position, const uint16_t intensity) {
+        this->position = position;
+        this->intensity = intensity;
+    }
+};
 
 class CubeRenderer {
     public:
@@ -21,51 +32,47 @@ class CubeRenderer {
         CubeRenderer() = default;
         ~CubeRenderer() { Shutdown(); }
 
-        void Init(const std::vector<glm::vec3>& ramp);
-
+        void Init(Data::ColorRampType rampType);
         void Shutdown();
 
-        void Render(Camera& camera, float globalScale, glm::vec3 globalColor);
-
+        void Render(Camera& camera, float globalScale);
         void UpdateBufferSize(uint64_t pointCount);
-
         void UpdateBuffers();
 
-        void AddCube(glm::vec3 position, glm::vec3 color, uint16_t intensity);
-
+        void AddCube(glm::vec3 position, uint16_t intensity);
         void UpdateInstancePosition(uint64_t index, glm::vec3 position);
+        void UpdateInstanceIntensity(uint64_t index, float intensity);
 
-        void UpdateInstanceColor(uint64_t index, glm::vec3 color);
-        
-        void NormalizeColors();
-
-        void UpdateColorRamp(const std::vector<glm::vec3>& ramp);
+        void NormalizeIntensities();
+        void UpdateColorRamp(Data::ColorRampType rampType);
 
         void Clear();
 
-        // ACCESSORS
-        std::vector<Data::Cube>& GetCubes();
+    private:
+        void BuildColorLUT(Data::ColorRampType rampType);
 
     private:
-        std::vector<Data::Cube> cubes;
-        std::vector<glm::vec3> colorRamp;
+        std::vector<CubeInstance> cubes;
 
-        // GPU MODEL/COLOR BUFFERS
+        // GPU MODEL/INTENSITY BUFFERS
         std::vector<glm::mat4> instanceModels;
-        std::vector<glm::vec3> instanceColors;
+        std::vector<float> instanceIntensities;
 
         // GPU OBJECTS
+        GLuint cubeShader = 0;
         GLuint vao = 0;
         GLuint vbo = 0;
         GLuint ebo = 0;
         GLuint instanceVBO = 0;
-        GLuint instanceColorVBO = 0;
-        GLuint cubeShader = 0;
+        GLuint instanceIntensityVBO = 0;
+        GLuint colorLUTTex = 0;
 
         // SHADER UNIFORMS
         GLint uViewProjectionLocation = -1;
-        GLint uGlobalColorLocation = -1;
         GLint uGlobalScaleLocation = -1;
+
+        static constexpr size_t COLOR_LUT_SIZE = 256;
+        std::vector<glm::vec3> colorLUT;
 
         // CUBE VERTICES (CORNER POSITIONS)
         static constexpr float cubeVertices[24] = {
@@ -88,7 +95,7 @@ class CubeRenderer {
             3, 2, 6, 6, 7, 3,   // TOP
             4, 5, 1, 1, 0, 4    // BOTTOM
         };
-
+        
     private:
         // NON-COPYABLE (OWNS GPU RESOURCES)
         CubeRenderer(const CubeRenderer&) = delete;

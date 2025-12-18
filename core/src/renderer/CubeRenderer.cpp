@@ -7,12 +7,11 @@
 
 #include <Camera.hpp>
 #include <ColorRamp.hpp>
-#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
 
-void CubeRenderer::Init(const std::vector<glm::vec3>& ramp) {
-    colorRamp = ramp;
+void CubeRenderer::Init(Data::ColorRampType rampType) {
+    BuildColorLUT(rampType);
     cubeShader = Renderer::CreateShaderProgramFromFiles(
         "../assets/shaders/cube/cube.vert",
         "../assets/shaders/cube/cube.frag"
@@ -20,7 +19,6 @@ void CubeRenderer::Init(const std::vector<glm::vec3>& ramp) {
 
     glUseProgram(cubeShader);
     uViewProjectionLocation = glGetUniformLocation(cubeShader, "uViewProjection");
-    uGlobalColorLocation = glGetUniformLocation(cubeShader, "uGlobalColor");
     uGlobalScaleLocation = glGetUniformLocation(cubeShader, "uGlobalScale");
     glUseProgram(0);
 
@@ -29,7 +27,7 @@ void CubeRenderer::Init(const std::vector<glm::vec3>& ramp) {
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ebo);
     glGenBuffers(1, &instanceVBO);
-    glGenBuffers(1, &instanceColorVBO);
+    glGenBuffers(1, &instanceIntensityVBO);
 
     glBindVertexArray(vao);
 
@@ -44,7 +42,7 @@ void CubeRenderer::Init(const std::vector<glm::vec3>& ramp) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
 
-    // SETUP INSTANCE MODEL MATRIX BUFFERS
+    // SETUP INSTANCE MODEL MATRIX BUFFER
     glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
@@ -54,12 +52,11 @@ void CubeRenderer::Init(const std::vector<glm::vec3>& ramp) {
         glVertexAttribDivisor(1 + i, 1);
     }
 
-    // SETUP INSTANCE COLOR BUFFERS
-    glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
+    // SETUP INSTANCE INTENSITY BUFFER
+    glBindBuffer(GL_ARRAY_BUFFER, instanceIntensityVBO);
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
-
     glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*) 0);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)0);
     glVertexAttribDivisor(5, 1);
 
     glBindVertexArray(0);
@@ -71,11 +68,12 @@ void CubeRenderer::Shutdown() {
     if (vbo) glDeleteBuffers(1, &vbo);
     if (ebo) glDeleteBuffers(1, &ebo);
     if (instanceVBO) glDeleteBuffers(1, &instanceVBO);
-    if (instanceColorVBO) glDeleteBuffers(1, &instanceColorVBO);
-    vao = vbo = ebo = instanceVBO = instanceColorVBO = cubeShader = 0;
+    if (instanceIntensityVBO) glDeleteBuffers(1, &instanceIntensityVBO);
+    if (colorLUTTex) glDeleteTextures(1, &colorLUTTex);
+    vao = vbo = ebo = instanceVBO = instanceIntensityVBO = cubeShader = colorLUTTex = 0;
 }
 
-void CubeRenderer::Render(Camera& camera, float globalScale, glm::vec3 globalColor) {
+void CubeRenderer::Render(Camera& camera, float globalScale) {
     if (cubes.empty()) return;
 
     const glm::mat4& view = camera.GetView();
@@ -89,8 +87,12 @@ void CubeRenderer::Render(Camera& camera, float globalScale, glm::vec3 globalCol
     glm::mat4 viewProjection = projection * view;
 
     glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
-    glUniform3fv(uGlobalColorLocation, 1, glm::value_ptr(globalColor));
     glUniform1f(uGlobalScaleLocation, globalScale);
+
+    // BIND COLOR LUT (LOOK UP TABLE)
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_1D, colorLUTTex);
+    glUniform1i(glGetUniformLocation(cubeShader, "uColorLUT"), 0);
 
     glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(cubes.size()));
 
@@ -105,47 +107,51 @@ void CubeRenderer::UpdateBufferSize(uint64_t pointCount) {
     cubes.reserve(pointCount);
 
     instanceModels.resize(pointCount);
-    instanceColors.resize(pointCount);
+    instanceIntensities.resize(pointCount);
 
     glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
     glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-    glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, instanceIntensityVBO);
+    glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(float), instanceIntensities.data(), GL_DYNAMIC_DRAW);
 }
 
-void CubeRenderer::AddCube(glm::vec3 position, glm::vec3 color, uint16_t intensity) {
+void CubeRenderer::UpdateBuffers() {
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, instanceModels.size() * sizeof(glm::mat4), instanceModels.data(), GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, instanceIntensityVBO);
+    glBufferData(GL_ARRAY_BUFFER, instanceIntensities.size() * sizeof(float), instanceIntensities.data(), GL_DYNAMIC_DRAW);
+}
+
+void CubeRenderer::AddCube(glm::vec3 position, uint16_t intensity) {
     const uint64_t index = cubes.size();
 
     // ADD CUBE
-    cubes.emplace_back(position, color, intensity);
+    cubes.emplace_back(position, intensity);
 
     // UPDATE INSTANCE BUFFERS
     UpdateInstancePosition(index, position);
-    UpdateInstanceColor(index, color);
+    UpdateInstanceIntensity(index, intensity);
 }
 
 void CubeRenderer::UpdateInstancePosition(uint64_t index, glm::vec3 position) {
     instanceModels[index] = glm::translate(glm::mat4(1.0f), position);
 }
 
-void CubeRenderer::UpdateInstanceColor(uint64_t index, glm::vec3 color) {
-    instanceColors[index] = color;
+void CubeRenderer::UpdateInstanceIntensity(uint64_t index, float intensity) {
+    instanceIntensities[index] = intensity;
 }
 
-void CubeRenderer::NormalizeColors() {
+void CubeRenderer::NormalizeIntensities() {
+    if (cubes.empty()) return;
+
     const size_t BIN_COUNT = 65535;
     std::vector<size_t> histogram(BIN_COUNT, 0);
-    
-    uint16_t min_intensity = UINT16_MAX;
-    uint16_t max_intensity = 0;
 
-    for (uint64_t index = 0; index < cubes.size(); ++index) {
-        // BUILD COLOR HISTOGRAM
-        uint16_t intensity = cubes[index].intensity;
-        min_intensity = std::min(min_intensity, cubes[index].intensity);
-        max_intensity = std::max(max_intensity, cubes[index].intensity);
-        histogram[cubes[index].intensity]++;
+    // BUILD COLOR HISTOGRAM
+    for (auto& cube : cubes) {
+        histogram[cube.intensity]++;
     }
 
     // BUILD CUMULATIVE HISTOGRAM (CUMULATIVE DISTRIBUTION FUNCTION)
@@ -155,46 +161,39 @@ void CubeRenderer::NormalizeColors() {
         cumulativeHistogram[i] = cumulativeHistogram[i - 1] + histogram[i];
     }
 
-    // APPLY COLOR GRADIENT, WITH WHITE BEING THE FALLBACK COLOR
-    auto ComputeColor = [&](uint64_t index) -> glm::vec3 {
-        if (colorRamp.empty()) {
-            return glm::vec3(1.0f);
-        }
-        float normalizedValue = float(cumulativeHistogram[cubes[index].intensity]) / float(cubes.size());
-        cubes[index].normalized_intensity = normalizedValue;
-        return Data::ColorMap(normalizedValue, colorRamp);
-    };
-    for (uint64_t index = 0; index < cubes.size(); ++index) {
-        UpdateInstanceColor(index, ComputeColor(index));
+    const float size_inv = 1.0f / float(cubes.size());
+    for (size_t i = 0; i < cubes.size(); ++i) {
+        float normalized = float(cumulativeHistogram[cubes[i].intensity]) * size_inv;
+        cubes[i].normalized_intensity = normalized;
+        instanceIntensities[i] = normalized;
     }
 }
 
-void CubeRenderer::UpdateBuffers() {
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, instanceModels.size() * sizeof(glm::mat4), instanceModels.data());
-
-    glBindBuffer(GL_ARRAY_BUFFER, instanceColorVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, instanceColors.size() * sizeof(glm::vec3), instanceColors.data());
+void CubeRenderer::UpdateColorRamp(Data::ColorRampType rampType) {
+    BuildColorLUT(rampType);
+    UpdateBuffers();
 }
 
-void CubeRenderer::UpdateColorRamp(const std::vector<glm::vec3>& ramp) {
-    colorRamp = ramp;
-    auto ComputeColor = [&](uint64_t index) -> glm::vec3 {
-        if (colorRamp.empty()) {
-            return glm::vec3(1.0f);
-        }
-        return Data::ColorMap(cubes[index].normalized_intensity, colorRamp);
-    };
-    for (uint64_t index = 0; index < cubes.size(); ++index) {
-        UpdateInstanceColor(index, ComputeColor(index));
+void CubeRenderer::BuildColorLUT(Data::ColorRampType rampType) {
+    std::vector<glm::vec3> colorRamp = Data::ColorRamp::GetColorRamp(rampType);
+    colorLUT.resize(COLOR_LUT_SIZE);
+
+    for (size_t i = 0; i < COLOR_LUT_SIZE; ++i) {
+        float t = float(i) / float(COLOR_LUT_SIZE - 1);
+        colorLUT[i] = Data::ColorMap(t, colorRamp);
     }
+
+    if (!colorLUTTex) glGenTextures(1, &colorLUTTex);
+    
+    glBindTexture(GL_TEXTURE_1D, colorLUTTex);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, COLOR_LUT_SIZE, 0, GL_RGB, GL_FLOAT, colorLUT.data());
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 }
 
 void CubeRenderer::Clear() {
     cubes.clear();
     instanceModels.clear();
-    instanceColors.clear();
+    instanceIntensities.clear();
 }
-
-// ACCESSORS
-std::vector<Data::Cube>& CubeRenderer::GetCubes() { return cubes; }

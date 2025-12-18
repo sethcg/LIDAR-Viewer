@@ -16,7 +16,6 @@
 #include <pdal/filters/StreamCallbackFilter.hpp>
 
 #include <Camera.hpp>
-#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomLazHeader.hpp>
 
@@ -72,8 +71,7 @@ namespace CustomReader {
         const std::string& filepath, 
         Camera& camera,
         CubeRenderer& cubeRenderer,
-        double voxelSize,
-        uint32_t decimationStep)
+        uint64_t decimationStep)
     {
         try {
             auto start = std::chrono::high_resolution_clock::now();
@@ -82,7 +80,7 @@ namespace CustomReader {
 
             StageFactory factory;
 
-            // CUSTOM LAZ READER IS OBSOLETE, (ABOUT 20-25% SLOWER THAN BUILT-IN READER)
+            // CUSTOM LAZ READER [OBSOLETE]: ABOUT 20-25% SLOWER THAN BUILT-IN READER
             // TLDR: STREAMCALLBACK FIXED MASSIVE PERFORMANCE LOSS
             // Stage* reader = factory.createStage("readers.customlaz");
 
@@ -95,9 +93,7 @@ namespace CustomReader {
             Options readerOptions;
             readerOptions.add("filename", filepath);
             readerOptions.add("threads", std::thread::hardware_concurrency());
-
             reader->setOptions(readerOptions);
-
             Stage* lastStage = reader;
 
             // OPTIONAL DECIMATION FILTER
@@ -164,7 +160,7 @@ namespace CustomReader {
 
                 // ADD CUBE
                 uint16_t intensity = point.getFieldAs<uint16_t>(Dimension::Id::Intensity);
-                cubeRenderer.AddCube(position, color, intensity);
+                cubeRenderer.AddCube(position, intensity);
                 
                 // TRUE TO KEEP POINT, FALSE TO DISCARD THE POINT
                 return true;
@@ -172,7 +168,7 @@ namespace CustomReader {
             callbackFilter.setInput(*lastStage);
 
             // CREATE FIXED POINT TABLE
-            uint64_t pointCount = header->pointCount();
+            uint64_t pointCount = header->pointCount() / decimationStep;
             FixedPointTable table(pointCount);
 
             // UPDATE GPU INSTANCE BUFFER SIZES
@@ -183,18 +179,15 @@ namespace CustomReader {
             callbackFilter.prepare(table);
             callbackFilter.execute(table);
 
-            // NORMALIZE INTENSITY/COLOR VALUES
-            cubeRenderer.NormalizeColors();
-
-            // CALL GPU UPDATE
+            // NORMALIZE INTENSITY VALUES, THEN UPDATE GPU INSTANCE BUFFERS
+            cubeRenderer.NormalizeIntensities();
             cubeRenderer.UpdateBuffers();
 
             auto end = std::chrono::high_resolution_clock::now();
             double seconds = std::chrono::duration<double>(end - start).count();
-            uint64_t pointsRead = pointCount / decimationStep;
             SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                 "TOTAL POINTS: %llu, FINISHED READING IN %.4f seconds (%llu pts/sec)",
-                pointsRead, seconds, static_cast<unsigned long long>(pointsRead / seconds));
+                pointCount, seconds, static_cast<unsigned long long>(pointCount / seconds));
         }
         catch (const pdal_error& e) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PDAL ERROR WHILE PROCESSING FILE %s: %s", filepath.c_str(), e.what());

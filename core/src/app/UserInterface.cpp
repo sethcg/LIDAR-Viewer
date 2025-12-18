@@ -14,7 +14,6 @@
 #include <App.hpp>
 #include <AppContext.hpp>
 #include <Camera.hpp>
-#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
 #include <UserInterface.hpp>
@@ -107,7 +106,7 @@ namespace UserInterface {
     }
 
     void DrawFileSelectionSettings(Application::AppContext* appContext) {
-        CreateControlSection(appContext, "File", [&]() {
+        CreateControlSection("File", true, appContext, [&]() {
             ImGuiStyle& style = ImGui::GetStyle();
 
             const float buttonSpacing = 4.0f;
@@ -141,10 +140,15 @@ namespace UserInterface {
 
             // SELECTION BUTTON LABEL (LEFT-ALIGNED)
             ImVec2 textSize = ImGui::CalcTextSize(selectButtonLabel);
-            ImVec2 buttonPos = ImGui::GetItemRectMin();
-            float textX = buttonPos.x + style.FramePadding.x;
-            float textY = buttonPos.y + (selectButtonHeight - textSize.y) * 0.5f;
-            ImGui::GetWindowDrawList()->AddText(ImVec2(textX, textY), ImGui::GetColorU32(ImGuiCol_Text), selectButtonLabel);
+            ImVec2 buttonMin = ImGui::GetItemRectMin();
+            ImVec2 buttonMax = ImGui::GetItemRectMax();
+            buttonMax.x = buttonMax.x - style.FramePadding.x;
+            float textX = buttonMin.x + style.FramePadding.x;
+            float textY = buttonMin.y + (selectButtonHeight - textSize.y) * 0.5f;
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            drawList->PushClipRect(buttonMin, buttonMax, true);
+            drawList->AddText(ImVec2(textX, textY), ImGui::GetColorU32(ImGuiCol_Text), selectButtonLabel);
+            drawList->PopClipRect();
 
             ImGui::SameLine(0.0f, buttonSpacing);
             ImGui::BeginDisabled(appContext->filepath.empty());
@@ -167,24 +171,20 @@ namespace UserInterface {
     }
 
     void DrawCubeSettings(Application::AppContext* appContext) {
-        CreateControlSection(appContext, "Cube", [&]() {
-            // GLOBAL COLOR (TINT)
-            ImGui::ColorEdit3("Global Color", glm::value_ptr(appContext->globalColor));
-
+        CreateControlSection("Cube", true, appContext, [&]() {
             // GLOBAL SCALE
             ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
 
             // COLOR RAMP (GRADIENT)
             if (ImGui::Combo("Gradient", &selectedColorRampIndex, Data::ColorRampNames, IM_ARRAYSIZE(Data::ColorRampNames))) {
                 Data::ColorRampType selectedRamp = static_cast<Data::ColorRampType>(selectedColorRampIndex);
-                appContext->cubeRenderer->UpdateColorRamp(Data::ColorRamp::GetColorRamp(selectedRamp));
-                appContext->cubeRenderer->UpdateBuffers();
+                appContext->cubeRenderer->UpdateColorRamp(selectedRamp);
             }
         });
     }
 
     void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
-        CreateControlSection(appContext, "Orbital Camera", [&]() {
+        CreateControlSection("Orbital Camera", false, appContext, [&]() {
             // CAMERA ROTATION SPEED
             ImGui::SliderFloat("Rotation Speed", &appContext->camera->GetRotationSpeed(), 0.0f, 300.0f);
             

@@ -45,7 +45,7 @@ namespace Application {
         appContext.camera = std::make_unique<Camera>(width, height);
 
         appContext.cubeRenderer = std::make_unique<CubeRenderer>();
-        appContext.cubeRenderer->Init(Data::ColorRamp::HeatMap);
+        appContext.cubeRenderer->Init(Data::ColorRampType::HeatMap);
 
         TTF_Init();
         TTF_Font* textFont = TTF_OpenFont("../assets/fonts/Roboto-Regular.ttf", 18.0f);
@@ -106,8 +106,7 @@ namespace Application {
 
         appContext.cubeRenderer->Render(
             *appContext.camera,
-            appContext.globalScale,
-            appContext.globalColor
+            appContext.globalScale
         );
 
         appContext.textRenderer->UpdateFPS();

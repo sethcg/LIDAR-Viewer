@@ -26,7 +26,6 @@ namespace Application {
         std::string filepath;
 
         float globalScale;
-        glm::vec3 globalColor;
 
         ImFont* fontBold;
         ImFont* fontRegular;
@@ -39,7 +38,6 @@ namespace Application {
             filepath = "";
 
             globalScale = 0.05f;
-            globalColor = glm::vec3(1.0f);
         }
     };
 

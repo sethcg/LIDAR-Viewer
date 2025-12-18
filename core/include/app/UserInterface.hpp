@@ -23,11 +23,11 @@ namespace UserInterface {
     void SetCustomTheme();
 
     template <typename Callable>
-    inline void CreateControlSection(Application::AppContext* appContext, const char* label, Callable&& content) {
+    inline void CreateControlSection(const char* label, bool defaultOpen, Application::AppContext* appContext, Callable&& content) {
         ImGuiStyle& style = ImGui::GetStyle();
 
         ImGuiID id = ImGui::GetID(label);
-        bool isOpen = ImGui::GetStateStorage()->GetBool(id, true);
+        bool isOpen = ImGui::GetStateStorage()->GetBool(id, defaultOpen);
         ImVec4 baseColor = style.Colors[ImGuiCol_Header];
         ImVec4 activeColor = style.Colors[ImGuiCol_HeaderActive];
         ImGui::PushStyleColor(ImGuiCol_Header, isOpen ? activeColor : baseColor);

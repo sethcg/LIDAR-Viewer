@@ -5,12 +5,12 @@ layout(location = 1) in vec4 aModelRow0;        // Instance model matrix row 0
 layout(location = 2) in vec4 aModelRow1;        // Instance model matrix row 1
 layout(location = 3) in vec4 aModelRow2;        // Instance model matrix row 2
 layout(location = 4) in vec4 aModelRow3;        // Instance model matrix row 3
-layout(location = 5) in vec3 aInstanceColor;    // PER-INSTANCE COLOR
+layout(location = 5) in float aIntensity;       // PER-INSTANCE COLOR
+
+out float vIntensity;
 
 uniform mat4 uViewProjection;
 uniform float uGlobalScale;
-
-out vec3 vColor;
 
 void main() {
     // APPLY GLOBAL SCALE (INLINE FOR PERFORMANCE)
@@ -22,5 +22,5 @@ void main() {
     );
 
     gl_Position = uViewProjection * model * vec4(aPos, 1.0);
-    vColor = aInstanceColor;
+    vIntensity = aIntensity;
 }

@@ -14,7 +14,6 @@
 #include <pdal/Dimension.hpp>
 
 #include <Camera.hpp>
-#include <Cube.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomLazHeader.hpp>
 
@@ -26,8 +25,7 @@ namespace CustomReader {
         const std::string& filepath, 
         Camera& camera,
         CubeRenderer& cubeRenderer,
-        double voxelSize = 0.0f,
-        uint32_t decimationStep = 2
+        uint64_t decimationStep = 2
     );
 
 }
