@@ -4,19 +4,19 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <thread>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <tinyfiledialogs.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <App.hpp>
 #include <AppContext.hpp>
-#include <Camera.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
+#include <OrbitalCamera.hpp>
 
 namespace UserInterface {
 
@@ -32,7 +32,7 @@ namespace UserInterface {
         ImVec4 activeColor = style.Colors[ImGuiCol_HeaderActive];
         ImGui::PushStyleColor(ImGuiCol_Header, isOpen ? activeColor : baseColor);
         ImGui::PushFont(appContext->fontBold);
-        if (ImGui::CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader(label, isOpen ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None)) {
             content();
         }
         ImGui::PopFont();

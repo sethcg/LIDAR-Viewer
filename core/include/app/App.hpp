@@ -12,6 +12,13 @@
 #include <imgui_impl_opengl3.h>
 
 #include <AppContext.hpp>
+#include <ColorRamp.hpp>
+#include <CubeRenderer.hpp>
+#include <CustomReader.hpp>
+#include <FreeCamera.hpp>
+#include <OrbitalCamera.hpp>
+#include <TextRenderer.hpp>
+#include <UserInterface.hpp>
 
 namespace Application {
 

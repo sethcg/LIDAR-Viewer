@@ -11,10 +11,11 @@
 
 #include <App.hpp>
 #include <AppContext.hpp>
-#include <Camera.hpp>
 #include <ColorRamp.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
+#include <FreeCamera.hpp>
+#include <OrbitalCamera.hpp>
 #include <TextRenderer.hpp>
 #include <UserInterface.hpp>
 
@@ -42,7 +43,9 @@ namespace Application {
         if (!CreateSDLWindow("LIDAR Viewer")) return SDL_APP_FAILURE;
         if (!CreateGLContext(false)) return SDL_APP_FAILURE;
 
-        appContext.camera = std::make_unique<Camera>(width, height);
+        appContext.freeCamera = std::make_unique<FreeCamera>(width, height);
+        appContext.orbitalCamera = std::make_unique<OrbitalCamera>(width, height);
+        appContext.activeCamera = appContext.orbitalCamera.get();
 
         appContext.cubeRenderer = std::make_unique<CubeRenderer>();
         appContext.cubeRenderer->Init(Data::ColorRampType::HeatMap);
@@ -69,7 +72,6 @@ namespace Application {
     }
 
     SDL_AppResult App::ProcessEvent(SDL_Event* event) {
-        bool isFreeCamera = appContext.camera->GetFreeCamera();
         switch (event->type) {
             case SDL_EVENT_QUIT:
                 return SDL_APP_SUCCESS;
@@ -77,21 +79,21 @@ namespace Application {
                 width = event->window.data1;
                 height = event->window.data2;
                 glViewport(0, 0, width, height);
-                appContext.camera->Resize(width, height);
                 break;
             case SDL_EVENT_KEY_DOWN:
                 if (event->key.scancode == SDL_SCANCODE_F) {
-                    SDL_SetWindowRelativeMouseMode(window, !isFreeCamera);
-                    appContext.camera->GetFreeCamera() = !isFreeCamera;
+                    appContext.SwitchCamera(window, width, height);
                 }
                 break;
             case SDL_EVENT_MOUSE_MOTION:
-                appContext.camera->ProcessMouseMotion(event->motion.xrel, event->motion.yrel);
+                appContext.activeCamera->ProcessMouseMotion(event->motion.xrel, event->motion.yrel);
                 break;
         }
 
         // DISABLE GUI IN FREE CAMERA MODE
-        if(!isFreeCamera) ImGui_ImplSDL3_ProcessEvent(event);
+        if(appContext.activeCamera != appContext.freeCamera.get()) {
+            ImGui_ImplSDL3_ProcessEvent(event);
+        }
 
         return SDL_APP_CONTINUE;
     }
@@ -101,11 +103,11 @@ namespace Application {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        appContext.camera->ProcessKeyboard(deltaTime);
-        appContext.camera->Update(deltaTime);
+        appContext.activeCamera->ProcessKeyboard(deltaTime);
+        appContext.activeCamera->Update(deltaTime);
 
         appContext.cubeRenderer->Render(
-            appContext.camera->GetViewProjection(),
+            appContext.activeCamera->GetViewProjection(),
             appContext.globalScale
         );
 

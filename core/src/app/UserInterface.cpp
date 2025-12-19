@@ -4,19 +4,17 @@
 #include <cmath>
 #include <thread>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <tinyfiledialogs.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <App.hpp>
 #include <AppContext.hpp>
-#include <Camera.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomReader.hpp>
-#include <UserInterface.hpp>
+#include <OrbitalCamera.hpp>
 
 namespace UserInterface {
 
@@ -135,7 +133,7 @@ namespace UserInterface {
                 glm::vec3 minDistance = glm::vec3(header->minX, header->minY, header->minZ);
                 glm::vec3 maxDistance = glm::vec3(header->maxX, header->maxY, header->maxZ);
                 float radius = glm::length(maxDistance - minDistance) * 0.5f;
-                appContext->camera->UpdateBounds(glm::vec3(0.0f), radius);
+                appContext->orbitalCamera->UpdateBounds(glm::vec3(0.0f), radius);
 
                 // UPDATE GPU INSTANCE BUFFER SIZES
                 appContext->cubeRenderer->Clear();
@@ -209,13 +207,13 @@ namespace UserInterface {
     void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
         CreateControlSection("Orbital Camera", false, appContext, [&]() {
             // CAMERA ROTATION SPEED
-            ImGui::SliderFloat("Rotation Speed", &appContext->camera->GetRotationSpeed(), 0.0f, 50.0f);
+            ImGui::SliderFloat("Rotation Speed", &appContext->orbitalCamera->GetRotationSpeed(), 0.0f, 50.0f);
             
             // CAMERA ZOOM
             ImGui::SliderFloat("Zoom", 
-                &appContext->camera->GetTargetZoom(), 
-                appContext->camera->GetMinZoom(), 
-                appContext->camera->GetMaxZoom()
+                &appContext->orbitalCamera->GetTargetZoom(), 
+                appContext->orbitalCamera->GetMinZoom(), 
+                appContext->orbitalCamera->GetMaxZoom()
             );
         });
     }

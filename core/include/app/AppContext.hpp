@@ -8,8 +8,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <Camera.hpp>
 #include <CubeRenderer.hpp>
+#include <FreeCamera.hpp>
+#include <OrbitalCamera.hpp>
 #include <TextRenderer.hpp>
 
 #define WINDOW_WIDTH 1280
@@ -31,18 +32,34 @@ namespace Application {
         ImFont* fontBold;
         ImFont* fontRegular;
 
-        std::unique_ptr<Camera> camera;
+        Camera* activeCamera = nullptr;
+        std::unique_ptr<FreeCamera> freeCamera;
+        std::unique_ptr<OrbitalCamera> orbitalCamera;
+
         std::unique_ptr<CubeRenderer> cubeRenderer;
         std::unique_ptr<TextRenderer> textRenderer;
 
+        // MULTI-THREAD FLAGS FOR READING POINT DATA
         std::atomic<bool> isReadingFlag { false };
         std::atomic<bool> doneReadingFlag { false };
 
         AppContext() {
             filepath = "";
-
             globalScale = 0.05f;
         }
+        
+        inline void SwitchCamera(SDL_Window *window, int width, int height) {
+            if (activeCamera == freeCamera.get()) {
+                SDL_SetWindowRelativeMouseMode(window, false);
+                orbitalCamera->Resize(width, height);
+                activeCamera = orbitalCamera.get();
+            } else {
+                SDL_SetWindowRelativeMouseMode(window, true);
+                freeCamera->Resize(width, height);
+                activeCamera = freeCamera.get();
+            }
+        }
+
     };
 
 }
