@@ -13,6 +13,8 @@ namespace Renderer {
 
     GLuint CreateShader(const std::string& source, GLenum type);
 
+    bool ValidateShaderProgram(GLuint shaderProgram);
+
     GLuint CreateShaderProgramFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
 
 }

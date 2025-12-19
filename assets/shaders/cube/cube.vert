@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 layout(location = 0) in vec3 aPos;              // CUBE VERTEX POSITIONS
 layout(location = 1) in vec4 aModelRow0;        // Instance model matrix row 0

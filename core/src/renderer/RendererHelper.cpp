@@ -38,6 +38,17 @@ namespace Renderer {
         return shader;
     }
 
+    bool ValidateShaderProgram(GLuint shaderProgram) {
+        GLint success;
+        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+        if (!success) {
+            char infoLog[512];
+            glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SHADER PROGRAM LINK ERROR: %s", infoLog);
+        }
+        return success;
+    }
+
     GLuint CreateShaderProgramFromFiles(const std::string& vertexPath, const std::string& fragmentPath) {
         std::string vertexSource   = Renderer::LoadTextFile(vertexPath);
         std::string fragmentSource = Renderer::LoadTextFile(fragmentPath);
@@ -50,13 +61,7 @@ namespace Renderer {
         glAttachShader(shaderProgram, fragmentShader);
         glLinkProgram(shaderProgram);
 
-        GLint success;
-        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-        if (!success) {
-            char infoLog[512];
-            glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SHADER PROGRAM LINK ERROR: %s", infoLog);
-        }
+        if(!ValidateShaderProgram(shaderProgram)) return 0;
 
         // DELETE SHADER AFTER LINKING
         glDeleteShader(vertexShader);
