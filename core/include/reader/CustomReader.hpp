@@ -13,7 +13,6 @@
 #include <pdal/Options.hpp>
 #include <pdal/Dimension.hpp>
 
-#include <Camera.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomLazHeader.hpp>
 

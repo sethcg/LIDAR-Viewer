@@ -14,7 +14,6 @@
 #include <pdal/Streamable.hpp>
 #include <pdal/filters/StreamCallbackFilter.hpp>
 
-#include <Camera.hpp>
 #include <CubeRenderer.hpp>
 #include <CustomLazHeader.hpp>
 
