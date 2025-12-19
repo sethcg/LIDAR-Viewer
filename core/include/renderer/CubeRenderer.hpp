@@ -35,7 +35,7 @@ class CubeRenderer {
         void Init(Data::ColorRampType rampType);
         void Shutdown();
 
-        void Render(Camera& camera, float globalScale);
+        void Render(const glm::mat4& viewProjection, float globalScale);
         void UpdateBufferSize(uint64_t pointCount);
         void UpdateBuffers();
 

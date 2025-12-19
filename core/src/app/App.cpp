@@ -105,7 +105,7 @@ namespace Application {
         appContext.camera->Update(deltaTime);
 
         appContext.cubeRenderer->Render(
-            *appContext.camera,
+            appContext.camera->GetViewProjection(),
             appContext.globalScale
         );
 

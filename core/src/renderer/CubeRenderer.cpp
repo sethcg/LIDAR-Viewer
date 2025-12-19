@@ -5,7 +5,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <Camera.hpp>
 #include <ColorRamp.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
@@ -73,18 +72,13 @@ void CubeRenderer::Shutdown() {
     vao = vbo = ebo = instanceVBO = instanceIntensityVBO = cubeShader = colorLUTTex = 0;
 }
 
-void CubeRenderer::Render(Camera& camera, float globalScale) {
+void CubeRenderer::Render(const glm::mat4& viewProjection, float globalScale) {
     if (cubes.empty()) return;
-
-    const glm::mat4& view = camera.GetView();
-    const glm::mat4& projection = camera.GetProjection();
 
     glEnable(GL_DEPTH_TEST);
 
     glUseProgram(cubeShader);
     glBindVertexArray(vao);
-
-    glm::mat4 viewProjection = projection * view;
 
     glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
     glUniform1f(uGlobalScaleLocation, globalScale);

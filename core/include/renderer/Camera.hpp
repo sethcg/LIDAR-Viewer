@@ -24,8 +24,7 @@ class Camera {
         void ProcessKeyboard(float deltaTime);
         void ProcessMouseMotion(float xrel, float yrel);
 
-        const glm::mat4& GetView() const { return view; }
-        const glm::mat4& GetProjection() const { return projection; }
+        const glm::mat4& GetViewProjection() const { return projection * view; }
 
         float& GetRotationSpeed() { return rotationSpeed; }
         float& GetZoom() { return zoom; }
@@ -38,6 +37,7 @@ class Camera {
     private:
         glm::mat4 view;
         glm::mat4 projection;
+        glm::mat4 viewProjection;
 
         glm::vec3 sceneCenter = glm::vec3(0.0f);
         float sceneRadius = 5.0f;
