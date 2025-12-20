@@ -63,11 +63,12 @@ void FreeCamera::ProcessKeyboard(float deltaTime) {
 
 void FreeCamera::ProcessMouseMotion(float xrel, float yrel) {
     if (xrel == 0.0f && yrel == 0.0f) return;
+    
+    float mouseSensitivity = glm::clamp(mouseSensitivityFactor * 0.2f, 0.025f, 0.215f);
 
     // ADJUST HORIZONTAL (YAW) ANGLE
-    horizontalAngle += xrel * mouseSensitivity;
-
     // ADJUST/CLAMP VERTICAL (PITCH) ANGLE TO PREVENT CAMERA FLIPPING UPSIDE DOWN
+    horizontalAngle += xrel * mouseSensitivity;
     verticalAngle = glm::clamp(verticalAngle - yrel * mouseSensitivity, -89.0f, 89.0f);
 
     float pitch = glm::radians(verticalAngle);

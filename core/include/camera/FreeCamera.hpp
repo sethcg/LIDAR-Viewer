@@ -19,7 +19,7 @@ class FreeCamera : public Camera {
 
         float& GetSpeedFactor() { return speedFactor; }
         float& GetAccelerationFactor() { return accelerationFactor; }
-        float& GetMouseSensitivity() { return mouseSensitivity; }
+        float& GetMouseSensitivityFactor() { return mouseSensitivityFactor; }
 
     private:
         void PositionCamera(float radius);
@@ -38,6 +38,6 @@ class FreeCamera : public Camera {
         float minMovementSpeed = 0.0f;
         float maxMovementSpeed = 1.0f;
 
-        float accelerationFactor = 0.5f;
-        float mouseSensitivity = 0.1f;
+        float accelerationFactor = 0.75f;
+        float mouseSensitivityFactor = 0.5f;
 };

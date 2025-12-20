@@ -18,6 +18,7 @@
 
 namespace UserInterface {
 
+    static bool showTooltipIcons = false;
     static int selectedColorRampIndex = 0;
 
     void SetCustomTheme() {
@@ -84,7 +85,7 @@ namespace UserInterface {
         colors[ImGuiCol_ButtonActive]               = ImVec4(0.26f, 0.26f, 0.26f, 0.67f);
 
         // CHECK MARKS
-        colors[ImGuiCol_CheckMark]                  = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+        colors[ImGuiCol_CheckMark]                  = ImVec4(AccentBase.r, AccentBase.g, AccentBase.b, 1.00f);
 
         // SCROLLBAR
         colors[ImGuiCol_ScrollbarBg]                = ImVec4(0.25f, 0.25f, 0.25f, 0.60f);
@@ -195,9 +196,11 @@ namespace UserInterface {
     void DrawCubeSettings(Application::AppContext* appContext) {
         CreateControlSection("Cube", true, appContext, [&]() {
             // GLOBAL SCALE
+            TooltipInfoIcon(showTooltipIcons, "Adjusts the overall size of the cube.", appContext);
             ImGui::SliderFloat("Global Scale", &appContext->globalScale, 0.05f, 1.0f);
 
             // COLOR RAMP (GRADIENT)
+            TooltipInfoIcon(showTooltipIcons, "Selects the color gradient applied to the cube.", appContext);
             if (ImGui::Combo("Gradient", &selectedColorRampIndex, Data::ColorRampNames, IM_ARRAYSIZE(Data::ColorRampNames))) {
                 Data::ColorRampType selectedRamp = static_cast<Data::ColorRampType>(selectedColorRampIndex);
                 appContext->cubeRenderer->UpdateColorRamp(selectedRamp);
@@ -208,9 +211,11 @@ namespace UserInterface {
     void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
         CreateControlSection("Orbital Camera", false, appContext, [&]() {
             // CAMERA ROTATION SPEED
-            ImGui::SliderFloat("Speed##ORBITAL_CAMERA", &appContext->orbitalCamera->GetRotationSpeed(), 0.0f, 50.0f);
+            TooltipInfoIcon(showTooltipIcons, "How fast the camera orbits around the target.", appContext);
+            ImGui::SliderFloat("Rotation Speed##ORBITAL_CAMERA", &appContext->orbitalCamera->GetRotationSpeed(), 0.0f, 50.0f);
             
             // CAMERA ZOOM
+            TooltipInfoIcon(showTooltipIcons, "Adjusts the camera's distance from the target.", appContext);
             ImGui::SliderFloat("Zoom", 
                 &appContext->orbitalCamera->GetTargetZoom(), 
                 appContext->orbitalCamera->GetMinZoom(), 
@@ -222,10 +227,16 @@ namespace UserInterface {
     void DrawFreeCameraSettings(Application::AppContext* appContext) {
         CreateControlSection("Free Camera", false, appContext, [&]() {
             // CAMERA MOVEMENT SPEED
-            ImGui::SliderFloat("Speed##FREE_CAMERA", &appContext->freeCamera->GetSpeedFactor(), 0.05f, 1.0f);
+            TooltipInfoIcon(showTooltipIcons, "Base speed for camera movement.", appContext);
+            ImGui::SliderFloat("Movement Speed##FREE_CAMERA", &appContext->freeCamera->GetSpeedFactor(), 0.0f, 1.0f);
 
-            // FREE CAMERA ACCELERATION SPEED
+            // CAMERA ACCELERATION SPEED
+            TooltipInfoIcon(showTooltipIcons, "Multiplier for speed boost when holding Shift.", appContext);
             ImGui::SliderFloat("Acceleration##FREE_CAMERA", &appContext->freeCamera->GetAccelerationFactor(), 0.0f, 1.0f);
+        
+            // CAMERA MOUSE SENSITIVITY
+            TooltipInfoIcon(showTooltipIcons, "How fast the camera turns with mouse movement.", appContext);
+            ImGui::SliderFloat("Turn Rate##FREE_CAMERA", &appContext->freeCamera->GetMouseSensitivityFactor(), 0.0f, 1.0f);
         });
     }
 
@@ -235,6 +246,13 @@ namespace UserInterface {
         ImGui::SetNextWindowSize(minSize, ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
         ImGui::Begin("##CONTROL_PANEL", nullptr, ImGuiWindowFlags_NoCollapse);
+
+        // ENABLE/DISABLE TOOLTIPS
+        ImGui::PushFont(appContext->fontBold);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetTextLineHeight() * 0.125f));
+        ImGui::Checkbox("Show Tooltips", &showTooltipIcons);
+        ImGui::PopStyleVar();
+        ImGui::PopFont();
 
         DrawFileSelectionSettings(appContext);
         DrawCubeSettings(appContext);
