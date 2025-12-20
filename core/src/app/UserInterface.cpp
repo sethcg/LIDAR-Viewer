@@ -135,9 +135,11 @@ namespace UserInterface {
                     std::shared_ptr<LazHeader> header = reader->GetHeader(); 
 
                     // UPDATE CAMERA BOUNDING BOX
-                    glm::vec3 minDistance = glm::vec3(header->minX, header->minY, header->minZ);
-                    glm::vec3 maxDistance = glm::vec3(header->maxX, header->maxY, header->maxZ);
-                    float radius = glm::length(maxDistance - minDistance) * 0.5f;
+                    glm::vec3 minDistance(header->minX, header->minY, header->minZ);
+                    glm::vec3 maxDistance(header->maxX, header->maxY, header->maxZ);
+                    glm::vec3 center = 0.5f * (minDistance + maxDistance);
+                    float radius = 0.5f * glm::length(maxDistance - minDistance);
+                    appContext->freeCamera->UpdateBounds(glm::vec3(0.0f), radius);
                     appContext->orbitalCamera->UpdateBounds(glm::vec3(0.0f), radius);
 
                     // UPDATE GPU INSTANCE BUFFER SIZES
@@ -206,7 +208,7 @@ namespace UserInterface {
     void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
         CreateControlSection("Orbital Camera", false, appContext, [&]() {
             // CAMERA ROTATION SPEED
-            ImGui::SliderFloat("Rotation Speed", &appContext->orbitalCamera->GetRotationSpeed(), 0.0f, 50.0f);
+            ImGui::SliderFloat("Speed##ORBITAL_CAMERA", &appContext->orbitalCamera->GetRotationSpeed(), 0.0f, 50.0f);
             
             // CAMERA ZOOM
             ImGui::SliderFloat("Zoom", 
@@ -214,6 +216,16 @@ namespace UserInterface {
                 appContext->orbitalCamera->GetMinZoom(), 
                 appContext->orbitalCamera->GetMaxZoom()
             );
+        });
+    }
+
+    void DrawFreeCameraSettings(Application::AppContext* appContext) {
+        CreateControlSection("Free Camera", false, appContext, [&]() {
+            // CAMERA MOVEMENT SPEED
+            ImGui::SliderFloat("Speed##FREE_CAMERA", &appContext->freeCamera->GetSpeedFactor(), 0.05f, 1.0f);
+
+            // FREE CAMERA ACCELERATION SPEED
+            ImGui::SliderFloat("Acceleration##FREE_CAMERA", &appContext->freeCamera->GetAccelerationFactor(), 0.0f, 1.0f);
         });
     }
 
@@ -227,6 +239,7 @@ namespace UserInterface {
         DrawFileSelectionSettings(appContext);
         DrawCubeSettings(appContext);
         DrawOrbitalCameraSettings(appContext);
+        DrawFreeCameraSettings(appContext);
 
         ImGui::End();
     }

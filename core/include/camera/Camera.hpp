@@ -13,18 +13,18 @@ class Camera {
         virtual void ProcessKeyboard(float deltaTime) {}
         virtual void ProcessMouseMotion(float xrel, float yrel) {}
 
-        inline void Resize(int windowWidth, int windowHeight) {
+        virtual void UpdateBounds(glm::vec3 center, float radius) {
+            sceneCenter = center;
+            sceneRadius = radius;
+        }
+
+        virtual void Resize(int windowWidth, int windowHeight) {
             projection = glm::perspective(
                 glm::radians(45.0f),
                 float(windowWidth) / float(windowHeight),
                 0.1f,           // NEAR
                 100000.0f       // FAR
             );
-        }
-
-        inline void UpdateBounds(glm::vec3 center, float radius) {
-            sceneCenter = center;
-            sceneRadius = radius;
         }
 
         glm::mat4 GetViewProjection() const { return projection * view; }

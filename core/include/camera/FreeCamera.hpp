@@ -15,19 +15,29 @@ class FreeCamera : public Camera {
         void Update(float deltaTime) override;
         void ProcessKeyboard(float deltaTime) override;
         void ProcessMouseMotion(float xrel, float yrel) override;
+        void UpdateBounds(glm::vec3 center, float radius) override;
 
-        float& GetMovementSpeed() { return movementSpeed; }
-        float& GetAccelerationSpeed() { return accelerationSpeed; }
+        float& GetSpeedFactor() { return speedFactor; }
+        float& GetAccelerationFactor() { return accelerationFactor; }
         float& GetMouseSensitivity() { return mouseSensitivity; }
 
     private:
+        void PositionCamera(float radius);
+        float ComputeMovementSpeed() const;
+
         glm::vec3 position = glm::vec3(0.0f, -10.0f, 5.0f);
         glm::vec3 lookDirection = glm::vec3(0.0f, 1.0f, 0.0f);
         glm::vec3 cameraUpDirection = glm::vec3(0.0f, 0.0f, 1.0f);
+        glm::vec3 currentVelocity = glm::vec3(0.0f);
 
         float horizontalAngle = 90.0f;
         float verticalAngle = 0.0f;
-        float movementSpeed = 20.0f;
-        float accelerationSpeed = 2.0f;
+
+        float speedFactor = 0.5f;
+        float movementSpeed = 0.0f;
+        float minMovementSpeed = 0.0f;
+        float maxMovementSpeed = 1.0f;
+
+        float accelerationFactor = 0.5f;
         float mouseSensitivity = 0.1f;
 };

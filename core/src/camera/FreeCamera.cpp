@@ -9,6 +9,31 @@
 
 FreeCamera::FreeCamera(int windowWidth, int windowHeight) : Camera(windowWidth, windowHeight) {}
 
+void FreeCamera::UpdateBounds(glm::vec3 center, float radius) {
+    Camera::UpdateBounds(center, radius);
+    PositionCamera(radius);
+    // MAX MOVEMENT: ~40% OF RADIUS/SEC, CAPPED AT 500
+    // MIN MOVEMENT: ~15% OF RADIUS/SEC, CAPPED AT 15% OF MAX SPEED
+    maxMovementSpeed = glm::min(sceneRadius * 0.40f, 500.0f);
+    minMovementSpeed = glm::min(sceneRadius * 0.15f, maxMovementSpeed * 0.15f);
+    movementSpeed = ComputeMovementSpeed();
+}
+
+void FreeCamera::PositionCamera(float radius) {
+    position = glm::vec3(radius, -(radius * 0.5f), (radius * 0.5f));
+    lookDirection = glm::normalize(sceneCenter - position);
+
+    if (glm::length(lookDirection) < 0.0001f) return;
+
+    glm::vec3 direction = glm::normalize(lookDirection);
+    verticalAngle = glm::degrees(asin(direction.z));
+    horizontalAngle = glm::degrees(atan2(direction.x, direction.y));
+}
+
+float FreeCamera::ComputeMovementSpeed() const {
+    return glm::mix(minMovementSpeed, maxMovementSpeed, speedFactor);
+}
+
 void FreeCamera::Update(float deltaTime) {
     glm::vec3 cameraRight = glm::normalize(glm::cross(lookDirection, cameraUpDirection));
     glm::vec3 cameraUp = glm::cross(cameraRight, lookDirection);
@@ -17,32 +42,22 @@ void FreeCamera::Update(float deltaTime) {
 
 void FreeCamera::ProcessKeyboard(float deltaTime) {
     const bool* keystate = SDL_GetKeyboardState(nullptr);
-    if (!keystate[SDL_SCANCODE_W] &&
-        !keystate[SDL_SCANCODE_S] && 
-        !keystate[SDL_SCANCODE_A] && 
-        !keystate[SDL_SCANCODE_D] && 
-        !keystate[SDL_SCANCODE_SPACE]) {
-        return;
-    }
-
+    
     glm::vec3 strafeDirection = glm::cross(lookDirection, cameraUpDirection);
     glm::vec3 moveDirection(0.0f);
 
-    // MOVE UP WITH SPACEBAR
+    // DETERMINE DESIRED MOVEMENT DIRECTION
     if (keystate[SDL_SCANCODE_SPACE]) moveDirection += cameraUpDirection;
-
-    // MOVE FORWARD/BACKWARD (DEPENDING ON FACING DIRECTION)
     if (keystate[SDL_SCANCODE_W]) moveDirection += lookDirection;
     if (keystate[SDL_SCANCODE_S]) moveDirection -= lookDirection;
-
-    // STRAFE LEFT/RIGHT
     if (keystate[SDL_SCANCODE_D]) moveDirection += strafeDirection;
     if (keystate[SDL_SCANCODE_A]) moveDirection -= strafeDirection;
 
-    // APPLY MOVEMENT TO POSITION
     if (glm::length(moveDirection) > 0.0f) {
-        float speedMultiplier = keystate[SDL_SCANCODE_LSHIFT] ? accelerationSpeed : 1.0f;
-        position += moveDirection * movementSpeed * deltaTime * speedMultiplier;
+        float movementSpeed = ComputeMovementSpeed();
+        float accelerationSpeed = glm::clamp(accelerationFactor * 4.0f, 1.0f, 4.0f);
+        float accelerationRate = keystate[SDL_SCANCODE_LSHIFT] ? accelerationSpeed : 1.0f;
+        position += moveDirection * movementSpeed * accelerationRate * deltaTime;
     }
 }
 

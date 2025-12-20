@@ -53,7 +53,7 @@ namespace Application {
                 SDL_SetWindowRelativeMouseMode(window, false);
                 orbitalCamera->Resize(width, height);
                 activeCamera = orbitalCamera.get();
-            } else {
+            } else if(!filepath.empty()) {
                 SDL_SetWindowRelativeMouseMode(window, true);
                 freeCamera->Resize(width, height);
                 activeCamera = freeCamera.get();
