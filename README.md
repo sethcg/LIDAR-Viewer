@@ -1,4 +1,4 @@
-# Point Cloud Viewer
+# Lidar Viewer
 
 ### Description:
 
