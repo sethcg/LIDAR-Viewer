@@ -124,35 +124,36 @@ namespace UserInterface {
                     ".LAZ and .LAS files",
                     0 // DO NOT ALLOW MULTIPLE SELECTIONS
                 );
-                if (!selected) return;
-                appContext->filepath = selected;
+                if (selected) {
+                    appContext->filepath = selected;
 
-                std::shared_ptr<CustomReader::LazReader> reader = std::make_shared<CustomReader::LazReader>(
-                    appContext->filepath,
-                    appContext->cubeRenderer.get(),
-                    2 // DECIMATION STEP
-                );
-                std::shared_ptr<LazHeader> header = reader->GetHeader(); 
+                    std::shared_ptr<CustomReader::LazReader> reader = std::make_shared<CustomReader::LazReader>(
+                        appContext->filepath,
+                        appContext->cubeRenderer.get(),
+                        2 // DECIMATION STEP
+                    );
+                    std::shared_ptr<LazHeader> header = reader->GetHeader(); 
 
-                // UPDATE CAMERA BOUNDING BOX
-                glm::vec3 minDistance = glm::vec3(header->minX, header->minY, header->minZ);
-                glm::vec3 maxDistance = glm::vec3(header->maxX, header->maxY, header->maxZ);
-                float radius = glm::length(maxDistance - minDistance) * 0.5f;
-                appContext->orbitalCamera->UpdateBounds(glm::vec3(0.0f), radius);
+                    // UPDATE CAMERA BOUNDING BOX
+                    glm::vec3 minDistance = glm::vec3(header->minX, header->minY, header->minZ);
+                    glm::vec3 maxDistance = glm::vec3(header->maxX, header->maxY, header->maxZ);
+                    float radius = glm::length(maxDistance - minDistance) * 0.5f;
+                    appContext->orbitalCamera->UpdateBounds(glm::vec3(0.0f), radius);
 
-                // UPDATE GPU INSTANCE BUFFER SIZES
-                appContext->cubeRenderer->Clear();
-                appContext->cubeRenderer->UpdateBufferSize(header->pointCount());
+                    // UPDATE GPU INSTANCE BUFFER SIZES
+                    appContext->cubeRenderer->Clear();
+                    appContext->cubeRenderer->UpdateBufferSize(header->pointCount());
 
-                // READ LAS/LAZ FILE DATA (SEPERATE THREAD)
-                std::thread([appContext, reader]() {
-                    appContext->isReadingFlag.store(true, std::memory_order_release);
-                    
-                    // NOTE: CANNOT UPDATE OPENGL BUFFERS OUTSIDE OF MAIN THREAD
-                    reader->ReadPointData();
+                    // READ LAS/LAZ FILE DATA (SEPERATE THREAD)
+                    std::thread([appContext, reader]() {
+                        appContext->isReadingFlag.store(true, std::memory_order_release);
+                        
+                        // NOTE: CANNOT UPDATE OPENGL BUFFERS OUTSIDE OF MAIN THREAD
+                        reader->ReadPointData();
 
-                    appContext->doneReadingFlag.store(true, std::memory_order_release);
-                }).detach();
+                        appContext->doneReadingFlag.store(true, std::memory_order_release);
+                    }).detach();
+                }
             }
 
             // SELECTION BUTTON LABEL (LEFT-ALIGNED)
