@@ -13,7 +13,6 @@
 #include <AppContext.hpp>
 #include <ColorRamp.hpp>
 #include <CubeRenderer.hpp>
-#include <CustomReader.hpp>
 #include <FreeCamera.hpp>
 #include <OrbitalCamera.hpp>
 #include <TextRenderer.hpp>

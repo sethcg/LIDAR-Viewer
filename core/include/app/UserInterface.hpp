@@ -15,7 +15,7 @@
 #include <App.hpp>
 #include <AppContext.hpp>
 #include <CubeRenderer.hpp>
-#include <CustomReader.hpp>
+#include <LazReader.hpp>
 #include <OrbitalCamera.hpp>
 
 namespace UserInterface {

@@ -9,7 +9,7 @@
 
 using namespace pdal;
 
-struct CustomLazHeader {
+struct LazHeader {
 
     static const int LegacyReturnCount {5};
     static const int ReturnCount {15};

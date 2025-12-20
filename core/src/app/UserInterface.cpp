@@ -13,7 +13,7 @@
 #include <App.hpp>
 #include <AppContext.hpp>
 #include <CubeRenderer.hpp>
-#include <CustomReader.hpp>
+#include <LazReader.hpp>
 #include <OrbitalCamera.hpp>
 
 namespace UserInterface {
@@ -127,7 +127,12 @@ namespace UserInterface {
                 if (!selected) return;
                 appContext->filepath = selected;
 
-                CustomLazHeader* header = CustomReader::GetLazHeader(appContext->filepath);
+                std::shared_ptr<CustomReader::LazReader> reader = std::make_shared<CustomReader::LazReader>(
+                    appContext->filepath,
+                    appContext->cubeRenderer.get(),
+                    2 // DECIMATION STEP
+                );
+                std::shared_ptr<LazHeader> header = reader->GetHeader(); 
 
                 // UPDATE CAMERA BOUNDING BOX
                 glm::vec3 minDistance = glm::vec3(header->minX, header->minY, header->minZ);
@@ -140,21 +145,14 @@ namespace UserInterface {
                 appContext->cubeRenderer->UpdateBufferSize(header->pointCount());
 
                 // READ LAS/LAZ FILE DATA (SEPERATE THREAD)
-                std::thread dataLoadingThread([appContext, header]() {
+                std::thread([appContext, reader]() {
                     appContext->isReadingFlag.store(true, std::memory_order_release);
                     
                     // NOTE: CANNOT UPDATE OPENGL BUFFERS OUTSIDE OF MAIN THREAD
-                    uint64_t decimationStep = 2;
-                    CustomReader::ReadPointData(
-                        appContext->filepath, 
-                        *header, 
-                        *appContext->cubeRenderer, 
-                        decimationStep
-                    );
+                    reader->ReadPointData();
 
                     appContext->doneReadingFlag.store(true, std::memory_order_release);
-                });
-                dataLoadingThread.detach();
+                }).detach();
             }
 
             // SELECTION BUTTON LABEL (LEFT-ALIGNED)
