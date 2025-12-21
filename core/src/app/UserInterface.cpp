@@ -130,8 +130,7 @@ namespace UserInterface {
 
                     std::shared_ptr<CustomReader::LazReader> reader = std::make_shared<CustomReader::LazReader>(
                         appContext->filepath,
-                        appContext->cubeRenderer.get(),
-                        2 // DECIMATION STEP
+                        appContext->cubeRenderer.get()
                     );
                     std::shared_ptr<LazHeader> header = reader->GetHeader(); 
 
@@ -209,7 +208,7 @@ namespace UserInterface {
     }
 
     void DrawOrbitalCameraSettings(Application::AppContext* appContext) {
-        CreateControlSection("Orbital Camera", false, appContext, [&]() {
+        CreateControlSection("Orbital Camera", true, appContext, [&]() {
             // CAMERA ROTATION SPEED
             TooltipInfoIcon(showTooltipIcons, "How fast the camera orbits around the target.", appContext);
             ImGui::SliderFloat("Rotation Speed##ORBITAL_CAMERA", &appContext->orbitalCamera->GetRotationSpeed(), 0.0f, 50.0f);

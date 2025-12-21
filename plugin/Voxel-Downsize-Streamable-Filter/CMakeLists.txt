@@ -1,0 +1,50 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16 FATAL_ERROR)
+
+# SET PROJECT NAME
+PROJECT(custom-voxeldownsizestream-plugin)
+
+# SET LANGUAGE STANDARD
+SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# CHECK DEPENDENCIES
+FIND_PACKAGE(lazperf REQUIRED)
+FIND_PACKAGE(PDAL CONFIG REQUIRED)
+
+include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
+
+PDAL_CREATE_PLUGIN(
+    TYPE filter
+    NAME voxeldownsizestream
+    VERSION 1.0
+    SOURCES
+        CustomVoxelDownsizeFilter.hpp
+        CustomVoxelDownsizeFilter.cpp
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${PDAL_INCLUDE_DIRS}
+        ${PDAL_INCLUDE_DIRS}/pdal
+    LINK_WITH
+        ${PDAL_LIBRARIES}
+)
+
+# CREATE SHARED LIBRARY AT THE CORRECT LOCATION
+SET_TARGET_PROPERTIES(libpdal_plugin_filter_voxeldownsizestream PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    
+    # OPTIMIZE PDAL
+    INTERPROCEDURAL_OPTIMIZATION TRUE
+)
+
+IF(MSVC)
+    # COMPILER FLAGS FOR MSVC/RELEASE (INCREASE PERFORMANCE)
+    TARGET_COMPILE_OPTIONS(libpdal_plugin_filter_voxeldownsizestream PRIVATE
+        $<$<CONFIG:Release>:/O2 /DNDEBUG /arch:AVX2 /fp:fast /Ob3 /Gy>
+    )
+    TARGET_LINK_OPTIONS(libpdal_plugin_filter_voxeldownsizestream PRIVATE
+        $<$<CONFIG:Release>:/LTCG>
+    )
+ENDIF()
+
+INSTALL(TARGETS libpdal_plugin_filter_voxeldownsizestream DESTINATION ${CMAKE_BINARY_DIR})

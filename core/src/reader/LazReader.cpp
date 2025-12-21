@@ -23,10 +23,9 @@ using namespace pdal;
 namespace CustomReader {
 
     // CONSTUCTOR
-    LazReader::LazReader(const std::string& filepath, CubeRenderer* cubeRenderer, uint64_t decimationStep) {
+    LazReader::LazReader(const std::string& filepath, CubeRenderer* cubeRenderer) {
         options.filepath = filepath;
         options.cubeRenderer = cubeRenderer;
-        options.decimationStep = decimationStep;
         options.header = GetLazHeader(filepath);
     }
 
@@ -58,21 +57,22 @@ namespace CustomReader {
 
     void LazReader::ReadPointData() {
         if (!options.header) return;
-
         auto start = std::chrono::steady_clock::now();
 
         // CREATE LAS/LAZ READER
         StageFactory factory;
         Stage* lastStage = CreateLazReader(options.filepath, factory);
 
-        // [OPTIONAL] DECIMATION FILTER
-        lastStage = AddDecimationFilter(options.decimationStep, lastStage, factory);
+        // DECIMATION FILTER
+        u_int64 pointCount = options.header->pointCount();
+        lastStage = AddDecimationFilter(&pointCount, lastStage, factory);
+
+        lastStage = AddVoxelDownsizeFilter(lastStage, factory);
 
         // CREATE FINAL STREAM CALLBACK (FOR POINT PROCESSING)
         std::unique_ptr<pdal::StreamCallbackFilter> callback = CreateStreamCallback(lastStage, factory);
 
         // CREATE FIXED POINT TABLE
-        uint64_t pointCount = options.header->pointCount() / options.decimationStep;
         FixedPointTable table(pointCount);
 
         // EXECUTE PIPELINE
@@ -87,9 +87,6 @@ namespace CustomReader {
     }
 
     Stage* LazReader::CreateLazReader(const std::string& filepath, StageFactory& factory) {
-        // CUSTOM LAZ READER [OBSOLETE]: ABOUT 20-25% SLOWER THAN BUILT-IN READER
-        // TLDR: STREAMCALLBACK FIXED MASSIVE PERFORMANCE LOSS
-        // Stage* reader = factory.createStage("readers.customlaz");
         Stage* reader = factory.createStage("readers.las");
         if (!reader) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "FAILED TO CREATE LAS/LAZ READER");
@@ -102,21 +99,61 @@ namespace CustomReader {
         return reader;
     }
 
-    Stage* LazReader::AddDecimationFilter(uint64_t decimationStep, Stage* lastStage, StageFactory& factory) {
-        if (decimationStep > 1) {
-            Stage* decimation = factory.createStage("filters.decimation");
-            Options decimationOptions;
-            decimationOptions.add("step", decimationStep);
-            decimation->setOptions(decimationOptions);
-            decimation->setInput(*lastStage);
-            lastStage = decimation;
-        }
-        return lastStage;
+    Stage* LazReader::AddDecimationFilter(uint64_t* pointCount, Stage* lastStage, StageFactory& factory) {
+        const uint64_t minPoints = 2'000'000;
+        const double minStep = 1.0;
+        const double maxStep = 10.0;
+
+        if (*pointCount <= minPoints) return lastStage;
+
+        // LOGARITHMIC SCALING
+        double decimationStep = std::log10(static_cast<double>(*pointCount) / minPoints) + minStep;
+        decimationStep = std::clamp(decimationStep, minStep, maxStep);
+        *pointCount = *pointCount / decimationStep;
+
+        Stage* decimationFilter = factory.createStage("filters.decimation");
+        Options decimationOptions;
+        decimationOptions.add("step", 2.0f);
+        decimationFilter->setOptions(decimationOptions);
+        decimationFilter->setInput(*lastStage);
+        return decimationFilter;
     }
 
+    Stage* LazReader::AddMADFilter(Stage* lastStage, StageFactory& factory) {
+        // DOES NOT WORK IN STREAMABLE PIPELINE
+        Stage* madFilter = factory.createStage("filters.mad");
+        Options madOptions;
+        madOptions.add("dimension", "Intensity");
+        madOptions.add("k", 3.0f);                  // NUMBER OF STANDARD DEVIATIONS
+        madOptions.add("mad_multiplier", 1.5f);     // THRESHOLD MULTIPLIER
+        madFilter->setOptions(madOptions);
+        madFilter->setInput(*lastStage);
+        return madFilter;
+    }
+
+    Stage* LazReader::AddVoxelDownsizeFilter(Stage* lastStage, StageFactory& factory) {
+        float boundsX = options.header->maxX - options.header->minX;
+        float boundsY = options.header->maxY - options.header->minY;
+
+        float area = std::max(boundsX * boundsY, 1.0f);
+        float density = static_cast<float>(options.header->pointCount()) / area;
+        float spacing = std::sqrt(1.0f / density);
+
+        float cellSize = spacing * 1.2f;
+        cellSize = std::clamp(cellSize, 0.01f, 3.0f);
+        
+        Stage* voxelFilter = factory.createStage("filters.voxeldownsize");
+        Options voxelOptions;
+        voxelOptions.add("cell", cellSize);
+        voxelOptions.add("mode", "first");
+        voxelFilter->setOptions(voxelOptions);
+        voxelFilter->setInput(*lastStage);
+        return voxelFilter;
+    }
+    
     std::unique_ptr<StreamCallbackFilter> LazReader::CreateStreamCallback(Stage* lastStage, StageFactory& factory) {
         std::unique_ptr<pdal::StreamCallbackFilter> callbackFilter = std::make_unique<StreamCallbackFilter>();
-
+        
         std::shared_ptr<LazHeader> header = options.header;
         CubeRenderer* cubeRenderer = options.cubeRenderer;
         glm::vec3 center(

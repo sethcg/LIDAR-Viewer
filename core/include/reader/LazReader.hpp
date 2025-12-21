@@ -69,15 +69,13 @@ namespace CustomReader {
         std::string filepath;
         std::shared_ptr<LazHeader> header;
         CubeRenderer* cubeRenderer;
-        uint64_t decimationStep = 1;
     };
 
     class LazReader {
         public:
             LazReader(
                 const std::string& filepath, 
-                CubeRenderer* cubeRenderer, 
-                uint64_t decimationStep = 1
+                CubeRenderer* cubeRenderer
             );
 
             void ReadPointData();
@@ -90,11 +88,15 @@ namespace CustomReader {
 
             std::shared_ptr<LazHeader> GetLazHeader(const std::string& filepath);
 
-            pdal::Stage* CreateLazReader(const std::string& filepath, pdal::StageFactory& factory);
+            Stage* CreateLazReader(const std::string& filepath, StageFactory& factory);
 
-            pdal::Stage* AddDecimationFilter(uint64_t decimationStep, pdal::Stage* lastStage, pdal::StageFactory& factory);
+            Stage* AddDecimationFilter(uint64_t* pointCount, Stage* lastStage, StageFactory& factory);
 
-            std::unique_ptr<pdal::StreamCallbackFilter> CreateStreamCallback(pdal::Stage* lastStage, pdal::StageFactory& factory);
+            Stage* AddMADFilter(Stage* lastStage, StageFactory& factory);
+
+            Stage* AddVoxelDownsizeFilter(Stage* lastStage, StageFactory& factory);
+
+            std::unique_ptr<StreamCallbackFilter> CreateStreamCallback(Stage* lastStage, StageFactory& factory);
             
     };
 
