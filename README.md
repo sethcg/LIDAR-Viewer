@@ -34,31 +34,10 @@ cloc --include-lang=C++,"C/C++ Header",CMake --exclude-dir=build,vcpkg --out=lin
 
 | Language         | Files  | Blank | Comment | Code |
 |:-----------------|:------:|:-----:|:-------:|:-----:|
-| **C++**          | 11     | 278   | 70      | 970   |
-| **C/C++ Header** | 14     | 223   | 58      | 792   |
+| **C++**          | 11     | 276   | 69      | 961   |
+| **C/C++ Header** | 14     | 222   | 58      | 791   |
 | **CMake**        | 9      | 53    | 38      | 195   |
 |                                                     |
-| **Total**        | 34     | 554   | 92      | 1957  |
+| **Total**        | 34     | 551   | 165     | 1947  |
 
 </details>
-
-
-{
-            "label": "Build Release",
-            "type": "shell",
-            "command": "cmake --build --preset release",
-            "group": { "kind": "build", "isDefault": true },
-            "dependsOn": "Configure"
-        },
-        {
-            "label": "Build Debug",
-            "type": "shell",
-            "command": "cmake --build --preset debug",
-            "group": { "kind": "build" },
-            "dependsOn": "Configure"
-        },
-        {
-            "label": "Configure",
-            "type": "shell",
-            "command": "cmake --preset default"
-        }
