@@ -106,7 +106,7 @@ namespace CustomReader {
 
         if (*pointCount <= minPoints) return lastStage;
 
-        // LOGARITHMIC SCALING
+        // LOG SCALING
         double decimationStep = std::log10(static_cast<double>(*pointCount) / minPoints) + minStep;
         decimationStep = std::clamp(decimationStep, minStep, maxStep);
         *pointCount = *pointCount / decimationStep;
@@ -119,24 +119,13 @@ namespace CustomReader {
         return decimationFilter;
     }
 
-    Stage* LazReader::AddMADFilter(Stage* lastStage, StageFactory& factory) {
-        // DOES NOT WORK IN STREAMABLE PIPELINE
-        Stage* madFilter = factory.createStage("filters.mad");
-        Options madOptions;
-        madOptions.add("dimension", "Intensity");
-        madOptions.add("k", 3.0f);                  // NUMBER OF STANDARD DEVIATIONS
-        madOptions.add("mad_multiplier", 1.5f);     // THRESHOLD MULTIPLIER
-        madFilter->setOptions(madOptions);
-        madFilter->setInput(*lastStage);
-        return madFilter;
-    }
-
     Stage* LazReader::AddVoxelDownsizeFilter(Stage* lastStage, StageFactory& factory) {
-        float boundsX = options.header->maxX - options.header->minX;
-        float boundsY = options.header->maxY - options.header->minY;
+        std::shared_ptr<LazHeader> header = options.header;
+        float boundsX = header->maxX - header->minX;
+        float boundsY = header->maxY - header->minY;
 
         float area = std::max(boundsX * boundsY, 1.0f);
-        float density = static_cast<float>(options.header->pointCount()) / area;
+        float density = static_cast<float>(header->pointCount()) / area;
         float spacing = std::sqrt(1.0f / density);
 
         float cellSize = spacing * 1.2f;
@@ -157,12 +146,12 @@ namespace CustomReader {
         std::shared_ptr<LazHeader> header = options.header;
         CubeRenderer* cubeRenderer = options.cubeRenderer;
         glm::vec3 center(
-            (options.header->minX + options.header->maxX) / 2.0f,
-            (options.header->minY + options.header->maxY) / 2.0f,
-            (options.header->minZ + options.header->maxZ) / 2.0f
+            (header->minX + header->maxX) / 2.0f,
+            (header->minY + header->maxY) / 2.0f,
+            (header->minZ + header->maxZ) / 2.0f
         );
 
-        callbackFilter->setCallback([header, cubeRenderer, center](PointRef& point) -> bool {
+        callbackFilter->setCallback([cubeRenderer, header, center](PointRef& point) -> bool {
             // POINT POSITION CENTERED AROUND THE (0, 0, 0)
             double x = point.getFieldAs<double>(Dimension::Id::X);
             double y = point.getFieldAs<double>(Dimension::Id::Y);
@@ -186,7 +175,6 @@ namespace CustomReader {
             // TRUE TO KEEP POINT, FALSE TO DISCARD THE POINT
             return true;
         });
-
         callbackFilter->setInput(*lastStage);
         return callbackFilter;
     }

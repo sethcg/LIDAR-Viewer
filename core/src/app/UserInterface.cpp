@@ -147,10 +147,10 @@ namespace UserInterface {
                     appContext->cubeRenderer->UpdateBufferSize(header->pointCount());
 
                     // READ LAS/LAZ FILE DATA (SEPERATE THREAD)
+                    // NOTE: CANNOT UPDATE OPENGL BUFFERS OUTSIDE OF MAIN THREAD
                     std::thread([appContext, reader]() {
                         appContext->isReadingFlag.store(true, std::memory_order_release);
-                        
-                        // NOTE: CANNOT UPDATE OPENGL BUFFERS OUTSIDE OF MAIN THREAD
+        
                         reader->ReadPointData();
 
                         appContext->doneReadingFlag.store(true, std::memory_order_release);

@@ -92,8 +92,6 @@ namespace CustomReader {
 
             Stage* AddDecimationFilter(uint64_t* pointCount, Stage* lastStage, StageFactory& factory);
 
-            Stage* AddMADFilter(Stage* lastStage, StageFactory& factory);
-
             Stage* AddVoxelDownsizeFilter(Stage* lastStage, StageFactory& factory);
 
             std::unique_ptr<StreamCallbackFilter> CreateStreamCallback(Stage* lastStage, StageFactory& factory);
