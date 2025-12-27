@@ -69,5 +69,21 @@ namespace Renderer {
 
         return shaderProgram;
     }
+    
+    GLuint CreateComputeShaderProgram(const std::string& computeShaderPath) {
+        std::string computeShaderSource = Renderer::LoadTextFile(computeShaderPath);
+
+        GLuint computeShader = Renderer::CreateShader(computeShaderSource, GL_COMPUTE_SHADER);
+
+        GLuint shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, computeShader);
+        glLinkProgram(shaderProgram);
+        
+        if(!ValidateShaderProgram(shaderProgram)) return 0;
+        
+        glDeleteShader(computeShader);
+        
+        return shaderProgram;
+    }
 
 }

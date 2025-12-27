@@ -79,7 +79,7 @@ namespace CustomReader {
             );
 
             void ReadPointData();
-
+            
             // ACCESSORS
             inline std::shared_ptr<LazHeader> GetHeader() const { return options.header; }
 
@@ -91,8 +91,6 @@ namespace CustomReader {
             Stage* CreateLazReader(const std::string& filepath, StageFactory& factory);
 
             Stage* AddDecimationFilter(uint64_t* pointCount, Stage* lastStage, StageFactory& factory);
-
-            Stage* AddVoxelDownsizeFilter(Stage* lastStage, StageFactory& factory);
 
             std::unique_ptr<StreamCallbackFilter> CreateStreamCallback(Stage* lastStage, StageFactory& factory);
             

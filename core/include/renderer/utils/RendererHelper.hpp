@@ -17,4 +17,6 @@ namespace Renderer {
 
     GLuint CreateShaderProgramFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
 
+    GLuint CreateComputeShaderProgram(const std::string& computeShaderPath);
+
 }

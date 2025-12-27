@@ -21,10 +21,11 @@
 namespace Application {
 
     bool App::CreateSDLWindow(const char* title) {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        // SET SDL GL ATTRIBUTES (OpenGL 4.3 CORE)
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
+        
         SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_DEBUG);
 
         window = SDL_CreateWindow(title, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS); 
@@ -112,9 +113,10 @@ namespace Application {
 
         // UPDATE THE GPU BUFFERS ONCE WHEN DONE READING DATA
         if (appContext.doneReadingFlag.load(std::memory_order_acquire)) {
-            // RESET DATA READING FLAGS
             appContext.isReadingFlag.store(false, std::memory_order_release);
             appContext.doneReadingFlag.store(false, std::memory_order_release);
+
+            appContext.cubeRenderer->VoxelDownsample();
 
             appContext.cubeRenderer->NormalizeIntensities();
             appContext.cubeRenderer->UpdateBuffers();

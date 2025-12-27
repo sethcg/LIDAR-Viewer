@@ -203,6 +203,7 @@ namespace UserInterface {
             if (ImGui::Combo("Gradient", &selectedColorRampIndex, Data::ColorRampNames, IM_ARRAYSIZE(Data::ColorRampNames))) {
                 Data::ColorRampType selectedRamp = static_cast<Data::ColorRampType>(selectedColorRampIndex);
                 appContext->cubeRenderer->UpdateColorRamp(selectedRamp);
+                appContext->cubeRenderer->UpdateBuffers();
             }
         });
     }

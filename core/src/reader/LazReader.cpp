@@ -46,7 +46,7 @@ namespace CustomReader {
         auto header = std::make_shared<LazHeader>();
         header->fill(headerBuffer, LazHeader::Size14);
 
-        uint64_t fileSize = Utils::fileSize(filepath);
+        uint64_t fileSize = pdal::Utils::fileSize(filepath);
         StringList errors = header->validate(fileSize);
         if (!errors.empty()) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", errors.front());
@@ -66,8 +66,6 @@ namespace CustomReader {
         // DECIMATION FILTER
         u_int64 pointCount = options.header->pointCount();
         lastStage = AddDecimationFilter(&pointCount, lastStage, factory);
-
-        lastStage = AddVoxelDownsizeFilter(lastStage, factory);
 
         // CREATE FINAL STREAM CALLBACK (FOR POINT PROCESSING)
         std::unique_ptr<pdal::StreamCallbackFilter> callback = CreateStreamCallback(lastStage, factory);
@@ -117,27 +115,6 @@ namespace CustomReader {
         decimationFilter->setOptions(decimationOptions);
         decimationFilter->setInput(*lastStage);
         return decimationFilter;
-    }
-
-    Stage* LazReader::AddVoxelDownsizeFilter(Stage* lastStage, StageFactory& factory) {
-        std::shared_ptr<LazHeader> header = options.header;
-        float boundsX = header->maxX - header->minX;
-        float boundsY = header->maxY - header->minY;
-
-        float area = std::max(boundsX * boundsY, 1.0f);
-        float density = static_cast<float>(header->pointCount()) / area;
-        float spacing = std::sqrt(1.0f / density);
-
-        float cellSize = spacing * 1.2f;
-        cellSize = std::clamp(cellSize, 0.01f, 3.0f);
-        
-        Stage* voxelFilter = factory.createStage("filters.voxeldownsize");
-        Options voxelOptions;
-        voxelOptions.add("cell", cellSize);
-        voxelOptions.add("mode", "first");
-        voxelFilter->setOptions(voxelOptions);
-        voxelFilter->setInput(*lastStage);
-        return voxelFilter;
     }
     
     std::unique_ptr<StreamCallbackFilter> LazReader::CreateStreamCallback(Stage* lastStage, StageFactory& factory) {

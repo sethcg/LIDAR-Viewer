@@ -212,7 +212,7 @@ struct LazHeader {
             errors.push_back("Invalid VLR offset - exceeds file size.");
         }
         if (!pointFormatSupported()) {
-            errors.push_back("Unsupported LAS input point format: " + Utils::toString((int)pointFormat()) + ".");
+            errors.push_back("Unsupported LAS input point format: " + pdal::Utils::toString((int)pointFormat()) + ".");
         }
         return errors;
     }

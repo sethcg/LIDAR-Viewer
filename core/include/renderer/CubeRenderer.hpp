@@ -9,22 +9,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/common.hpp>
 
+#include <ColorLUT.hpp>
 #include <ColorRamp.hpp>
+#include <CubeInstance.hpp>
 #include <RendererHelper.hpp>
+#include <VoxelDownsample.hpp>
 
 // FORWARD DECLARATION
 class Camera;
 
-struct CubeInstance {
-    glm::vec3 position;
-    uint16_t intensity;
-    float normalized_intensity = 0.0f;
-    
-    CubeInstance(const glm::vec3& position, const uint16_t intensity) {
-        this->position = position;
-        this->intensity = intensity;
-    }
-};
+using namespace Renderer;
 
 class CubeRenderer {
     public:
@@ -45,34 +39,33 @@ class CubeRenderer {
 
         void NormalizeIntensities();
         void UpdateColorRamp(Data::ColorRampType rampType);
+        
+        void VoxelDownsample();
 
         void Clear();
 
     private:
-        void BuildColorLUT(Data::ColorRampType rampType);
-
-    private:
         std::vector<CubeInstance> cubes;
 
-        // GPU MODEL/INTENSITY BUFFERS
+        // INSTANCE BUFFERS
         std::vector<glm::mat4> instanceModels;
         std::vector<float> instanceIntensities;
 
-        // GPU OBJECTS
+        // GPU RESOURCES
         GLuint cubeShader = 0;
         GLuint vao = 0;
         GLuint vbo = 0;
         GLuint ebo = 0;
         GLuint instanceVBO = 0;
         GLuint instanceIntensityVBO = 0;
-        GLuint colorLUTTex = 0;
+
+        Utils::ColorLUT colorLUT;
+        
+        Filters::VoxelDownsample voxelDownsampler;
 
         // SHADER UNIFORMS
         GLint uViewProjectionLocation = -1;
         GLint uGlobalScaleLocation = -1;
-
-        static constexpr size_t COLOR_LUT_SIZE = 256;
-        std::vector<glm::vec3> colorLUT;
 
         // CUBE VERTICES (CORNER POSITIONS)
         static constexpr float cubeVertices[24] = {
@@ -99,5 +92,5 @@ class CubeRenderer {
     private:
         // NON-COPYABLE (OWNS GPU RESOURCES)
         CubeRenderer(const CubeRenderer&) = delete;
-        CubeRenderer& operator=(const CubeRenderer&) = delete;
+        CubeRenderer& operator = (const CubeRenderer&) = delete;
 };

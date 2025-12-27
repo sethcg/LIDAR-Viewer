@@ -1,20 +1,29 @@
+#include <chrono>
 #include <vector>
 #include <string>
 
+#include <SDL3/SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <ColorLUT.hpp>
 #include <ColorRamp.hpp>
+#include <CubeInstance.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
+#include <VoxelDownsample.hpp>
+
+using namespace Renderer;
 
 void CubeRenderer::Init(Data::ColorRampType rampType) {
-    BuildColorLUT(rampType);
-    cubeShader = Renderer::CreateShaderProgramFromFiles(
+    cubeShader = CreateShaderProgramFromFiles(
         "../assets/shaders/cube/cube.vert",
         "../assets/shaders/cube/cube.frag"
     );
+    
+    colorLUT.Init(rampType);
+    voxelDownsampler.Init();
 
     glUseProgram(cubeShader);
     uViewProjectionLocation = glGetUniformLocation(cubeShader, "uViewProjection");
@@ -68,8 +77,11 @@ void CubeRenderer::Shutdown() {
     if (ebo) glDeleteBuffers(1, &ebo);
     if (instanceVBO) glDeleteBuffers(1, &instanceVBO);
     if (instanceIntensityVBO) glDeleteBuffers(1, &instanceIntensityVBO);
-    if (colorLUTTex) glDeleteTextures(1, &colorLUTTex);
-    vao = vbo = ebo = instanceVBO = instanceIntensityVBO = cubeShader = colorLUTTex = 0;
+    
+    colorLUT.Shutdown();
+    voxelDownsampler.Shutdown();
+    
+    vao = vbo = ebo = instanceVBO = instanceIntensityVBO = cubeShader;
 }
 
 void CubeRenderer::Render(const glm::mat4& viewProjection, float globalScale) {
@@ -83,9 +95,7 @@ void CubeRenderer::Render(const glm::mat4& viewProjection, float globalScale) {
     glUniformMatrix4fv(uViewProjectionLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
     glUniform1f(uGlobalScaleLocation, globalScale);
 
-    // BIND COLOR LUT (LOOK UP TABLE)
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_1D, colorLUTTex);
+    colorLUT.Bind(0);
     glUniform1i(glGetUniformLocation(cubeShader, "uColorLUT"), 0);
 
     glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(cubes.size()));
@@ -164,26 +174,40 @@ void CubeRenderer::NormalizeIntensities() {
 }
 
 void CubeRenderer::UpdateColorRamp(Data::ColorRampType rampType) {
-    BuildColorLUT(rampType);
-    UpdateBuffers();
+    colorLUT.Update(rampType);
 }
 
-void CubeRenderer::BuildColorLUT(Data::ColorRampType rampType) {
-    std::vector<glm::vec3> colorRamp = Data::ColorRamp::GetColorRamp(rampType);
-    colorLUT.resize(COLOR_LUT_SIZE);
+void CubeRenderer::VoxelDownsample() {
+    if (cubes.empty()) return;
+    auto start = std::chrono::steady_clock::now();
+    
+    // EXECTUE VOXEL DOWNSAMPLING ON THE GPU (FOR PERFORMANCE GAINS)
+    const size_t inputCount = cubes.size();
+    
+    std::vector<Filters::GPUPointData> output;
+    voxelDownsampler.Downsample(output, cubes);
 
-    for (size_t i = 0; i < COLOR_LUT_SIZE; ++i) {
-        float t = float(i) / float(COLOR_LUT_SIZE - 1);
-        colorLUT[i] = Data::ColorMap(t, colorRamp);
+    const size_t outputCount = output.size();
+
+    // UPDATE INSTANCE BUFFERS
+    cubes.clear();
+    cubes.reserve(outputCount);
+    instanceModels.resize(outputCount);
+    instanceIntensities.resize(outputCount);
+
+    for (size_t i = 0; i < outputCount; ++i) {
+        cubes.emplace_back(output[i].position, static_cast<uint16_t>(output[i].intensity));
+        instanceModels[i] = glm::translate(glm::mat4(1.0f), output[i].position);
+        instanceIntensities[i] = output[i].intensity;
     }
 
-    if (!colorLUTTex) glGenTextures(1, &colorLUTTex);
-    
-    glBindTexture(GL_TEXTURE_1D, colorLUTTex);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, COLOR_LUT_SIZE, 0, GL_RGB, GL_FLOAT, colorLUT.data());
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    auto end = std::chrono::steady_clock::now();
+    double seconds = std::chrono::duration<double>(end - start).count();
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+        "GPU VOXEL DOWNSAMPLING: %zu -> %zu POINTS (%.1f%% REDUCTION) IN %.4f SECONDS",
+        inputCount, outputCount,
+        (1.0f - static_cast<float>(outputCount) / static_cast<float>(inputCount)) * 100.0f,
+        seconds);
 }
 
 void CubeRenderer::Clear() {
