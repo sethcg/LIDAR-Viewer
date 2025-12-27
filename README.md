@@ -10,6 +10,9 @@ This is a C++ application that can visualize local LAS/LAZ file point-cloud data
 
 ```bash
 
+# CLONE REPOSITORY (WITH SUBMODULE)
+git clone --recursive https://github.com/sethcg/Lidar-Viewer.git
+
 # CONFIGURE
 cmake --preset default
 
