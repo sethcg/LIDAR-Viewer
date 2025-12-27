@@ -22,13 +22,13 @@ namespace Filters {
 
         glGenBuffers(1, &inputPointSSBO);
         glGenBuffers(1, &outputFlagSSBO);
-        glGenBuffers(1, &hashTableBuffer);
         
         glUseProgram(computeProgram);
 
         uVoxelSize = glGetUniformLocation(computeProgram, "uVoxelSize");
         uVoxelOrigin = glGetUniformLocation(computeProgram, "uVoxelOrigin");
-        uHashTableSize = glGetUniformLocation(computeProgram, "uHashTableSize");
+        uVoxelBounds = glGetUniformLocation(computeProgram, "uVoxelBounds");
+        uVoxelFlagSize = glGetUniformLocation(computeProgram, "uVoxelFlagSize");
     }
 
     // DECONSTRUCTOR
@@ -36,38 +36,41 @@ namespace Filters {
         if (computeProgram) glDeleteProgram(computeProgram);
         if (inputPointSSBO) glDeleteBuffers(1, &inputPointSSBO);
         if (outputFlagSSBO) glDeleteBuffers(1, &outputFlagSSBO);
-        if (hashTableBuffer) glDeleteBuffers(1, &hashTableBuffer);
-        if (outputCounterBuffer) glDeleteBuffers(1, &outputCounterBuffer);
 
-        computeProgram = 0;
-        inputPointSSBO = 0;
-        outputFlagSSBO = 0;
-        hashTableBuffer = 0;
-        outputCounterBuffer = 0;
+        computeProgram = inputPointSSBO = outputFlagSSBO = 0;
     }
 
     void VoxelDownsample::CalculateVoxelSize() {
         if (pointData.empty()) return;
 
         glm::vec3 minPoint = pointData[0];
+        glm::vec3 maxPoint = pointData[0];
         for (const glm::vec3& point : pointData) {
             minPoint = glm::min(minPoint, point);
+            maxPoint = glm::max(maxPoint, point);
         }
+        voxelOrigin = minPoint;
 
-        float baseVoxelSize = 0.35f;
-        float basePointCount = 50'000.0f;
-        float targetPointCount = 5'000'000.0f;
-        float targetVoxelSize = 3.5f;
+        // CALCULATE THE VOXEL SIZE
+        float lowerBoundVoxelSize = 0.4f;
+        float lowerBoundPointCount = 50'000.0f;
+        float upperBoundPointCount = 8'000'000.0f;
+        float upperBoundVoxelSize = 4.0f;
         
         float exponent = 
-            std::log(targetVoxelSize / baseVoxelSize) / 
-            std::log(targetPointCount / basePointCount);
-        float pointRatio = pointData.size() / basePointCount;
-        float calculatedSize = baseVoxelSize * std::pow(pointRatio, exponent);
-        voxelSize = std::clamp(calculatedSize, 0.35f, 5.0f);
-        
-        voxelOrigin = minPoint;
-        hashTableSize = pointData.size() * 8;
+            std::log(upperBoundVoxelSize / lowerBoundVoxelSize) / 
+            std::log(upperBoundPointCount / lowerBoundPointCount);
+        float pointRatio = pointData.size() / lowerBoundPointCount;
+        float size = lowerBoundVoxelSize * std::pow(pointRatio, exponent);   
+        voxelSize = std::clamp(size, 0.25f, 6.0f);
+
+        // CALCULATE VOXEL BOUNDS, AND VOXEL COUNT
+        glm::vec3 extent = maxPoint - minPoint;
+        int numVoxelsX = static_cast<int>(std::ceil(extent.x / voxelSize));
+        int numVoxelsY = static_cast<int>(std::ceil(extent.y / voxelSize));
+        int numVoxelsZ = static_cast<int>(std::ceil(extent.z / voxelSize));
+        voxelBounds = glm::vec3(numVoxelsX, numVoxelsY, numVoxelsZ);
+        voxelFlagSize = numVoxelsX * numVoxelsY * numVoxelsZ;
     }
 
     void VoxelDownsample::UpdateBufferSize() {
@@ -76,28 +79,23 @@ namespace Filters {
         glBufferData(GL_SHADER_STORAGE_BUFFER, pointData.size() * sizeof(glm::vec3), pointData.data(), GL_DYNAMIC_DRAW);
 
         // OUTPUT BUFFER (KEEP/REMOVE FLAGS)
-        std::vector<GLuint> outputFlags(pointData.size(), 0);
+        std::vector<GLuint> outputFlags(voxelFlagSize, 0);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, outputFlagSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, pointData.size() * sizeof(GLuint), outputFlags.data(), GL_DYNAMIC_DRAW);
-
-        // VOXEL HASH TABLE BUFFER
-        std::vector<GLuint> emptyHashTable(hashTableSize, 0); 
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, hashTableBuffer);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, hashTableSize * sizeof(GLuint), emptyHashTable.data(), GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, voxelFlagSize * sizeof(GLuint), outputFlags.data(), GL_DYNAMIC_DRAW);
 
         glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     }
 
-    void VoxelDownsample::ProcessPoints(std::vector<CubeInstance>& cubes) {
+    std::vector<CubeInstance> VoxelDownsample::ProcessPoints(std::vector<CubeInstance>& cubes) {
         if (cubes.empty()) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
                 "NO POINTS TO PROCESS IN VOXEL DOWNSAMPLING");
-            return;
+            return {};
         }
         if (cubes.size() > UINT32_MAX) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
                 "DATASET TOO LARGE: %zu POINTS EXCEED UINT32 LIMIT", cubes.size());
-            return;
+            return {};
         }
 
         // PREPARE INPUT DATA
@@ -109,8 +107,7 @@ namespace Filters {
 
         CalculateVoxelSize();
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, 
-            "VOXEL SIZE: %.3f, HASH TABLE SIZE: %u, POINT COUNT: %zu", 
-            voxelSize, static_cast<GLuint>(hashTableSize), pointData.size());
+            "VOXEL SIZE: %.3f, VOXEL COUNT: %zu, POINT COUNT: %zu", voxelSize, voxelFlagSize, pointData.size());
 
         UpdateBufferSize();
 
@@ -118,13 +115,13 @@ namespace Filters {
 
         // SET UNIFORMS
         glUniform1f(uVoxelSize, voxelSize);
-        glUniform3f(uVoxelOrigin, voxelOrigin.x, voxelOrigin.y, voxelOrigin.z);
-        glUniform1ui(uHashTableSize, static_cast<GLuint>(hashTableSize));
+        glUniform3fv(uVoxelOrigin, 1, glm::value_ptr(voxelOrigin));
+        glUniform3fv(uVoxelBounds, 1, glm::value_ptr(voxelBounds));
+        glUniform1ui(uVoxelFlagSize, static_cast<GLuint>(voxelFlagSize));
 
         // BIND BUFFERS
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, inputPointSSBO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, outputFlagSSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, hashTableBuffer);
 
         // DISPATCH COMPUTE SHADER
         GLuint workGroupsX = (static_cast<GLuint>(pointData.size()) + 63) / 64;
@@ -142,15 +139,13 @@ namespace Filters {
         filteredCubes.reserve(cubes.size());
         for (GLuint index = 0; index < cubes.size(); ++index) {
             // KEEP POINT IF FLAGGED
-            if (outputFlags[index] == 1) {
+            if (outputFlags[index] > 0) {
                 filteredCubes.push_back(cubes[index]);
             }
         }
-    
-        // UPDATE CUBES TO REFLECT DOWNSAMPLED POINTS
-        cubes = std::move(filteredCubes);
 
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        return filteredCubes;
     }
 
 }

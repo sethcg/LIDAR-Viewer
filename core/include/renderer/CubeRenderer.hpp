@@ -42,7 +42,6 @@ class CubeRenderer {
         
         // GPU FILTERS
         void VoxelDownsample();
-        void Deduplicate();
 
         void Clear();
 

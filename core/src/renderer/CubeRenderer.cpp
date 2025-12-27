@@ -179,9 +179,16 @@ void CubeRenderer::VoxelDownsample() {
     auto start = std::chrono::steady_clock::now();
 
     uint64_t inputCount = cubes.size();
-    
-    // FILTER USING GPU WITH GLOBAL SCALE
-    voxelDownsampler.ProcessPoints(cubes);
+
+    // EXECUTE VOXEL DOWNSAMPLING FILTER
+    std::vector<CubeInstance> filteredCubes = voxelDownsampler.ProcessPoints(cubes);
+    if (filteredCubes.empty()) return;
+
+    UpdateBufferSize(filteredCubes.size());
+    for (const CubeInstance& cube : filteredCubes) {
+        AddCube(cube.position, cube.intensity);
+    }
+    UpdateBuffers();
 
     // UPDATE INSTANCE BUFFERS
     instanceModels.resize(cubes.size());
@@ -198,10 +205,6 @@ void CubeRenderer::VoxelDownsample() {
         inputCount, cubes.size(),
         (1.0f - static_cast<float>(cubes.size()) / static_cast<float>(inputCount)) * 100.0f,
         seconds);
-}
-
-void CubeRenderer::Deduplicate() {
-    
 }
 
 void CubeRenderer::Clear() {

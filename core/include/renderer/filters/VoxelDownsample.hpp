@@ -21,7 +21,7 @@ namespace Filters {
             VoxelDownsample();
             ~VoxelDownsample();
 
-            void ProcessPoints(std::vector<CubeInstance>& cubes);
+            std::vector<CubeInstance> ProcessPoints(std::vector<CubeInstance>& cubes);
 
         private:
             void CalculateVoxelSize();
@@ -29,22 +29,22 @@ namespace Filters {
 
         private:
             float voxelSize = 0.0f;
+            uint32_t voxelFlagSize = 0;
             glm::vec3 voxelOrigin = glm::vec3(0.0f);
-            GLuint hashTableSize = 0;
+            glm::vec3 voxelBounds = glm::vec3(0.0f);
 
             std::vector<glm::vec3> pointData;
 
             // GPU UNIFORMS
             GLint uVoxelSize = -1;
             GLint uVoxelOrigin = -1;
-            GLint uHashTableSize = -1;
+            GLint uVoxelBounds = -1;
+            GLint uVoxelFlagSize = -1;
 
             // GPU RESOURCES
             GLuint computeProgram = 0;
             GLuint inputPointSSBO = 0;
             GLuint outputFlagSSBO = 0;
-            GLuint hashTableBuffer = 0;
-            GLuint outputCounterBuffer = 0;
 
         private:
             // NON-COPYABLE (OWNS GPU RESOURCES)

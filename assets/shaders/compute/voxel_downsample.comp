@@ -6,7 +6,8 @@ layout(local_size_x = 64) in;
 // UNIFORMS (PARAMETERS PASSED FROM CPU)
 uniform float uVoxelSize;           // SIZE OF EACH VOXEL CUBE
 uniform vec3 uVoxelOrigin;          // MINIMUM VOXEL TO USE AS OFFSET
-uniform uint uHashTableSize;        // SIZE OF HASH TABLE ARRAY
+uniform vec3 uVoxelBounds;          // NUMBER OF VOXELS ALONG X, Y, Z
+uniform uint uVoxelFlagSize;        // SIZE OF THE ATOMIC OUTPUT FLAG ARRAY
 
 // INPUT BUFFER (READ-ONLY POINT POSITION DATA)
 layout(std430, binding = 0) readonly buffer InputPointBuffer {
@@ -18,95 +19,41 @@ layout(std430, binding = 1) writeonly buffer OutputFlagBuffer {
     uint outputFlags[];  // 1 KEEP, 0 REMOVE
 };
 
-// HASH TABLE (STORES SIMPLE HASH KEYS OF VOXEL COORDINATES)
-layout(std430, binding = 2) restrict buffer VoxelHashBuffer {
-    uint voxelHash[];
-};
-
-// HASH FUNCTION FOR 3D VOXEL COORDINATES
-uint hash3D(ivec3 coord) {
-    // IMPROVED HASH WITH BETTER PRIME DISTRIBUTION AND MIXING
-    const uint p1 = 73856093u;
-    const uint p2 = 19349663u;  
-    const uint p3 = 83492791u;
-    
-    // BETTER MIXING TO REDUCE CLUSTERING
-    uint h = uint(coord.x) * p1;
-    h ^= uint(coord.y) * p2;
-    h ^= uint(coord.z) * p3;
-    
-    // ADDITIONAL MIXING ROUNDS FOR BETTER DISTRIBUTION
-    h ^= h >> 16u;
-    h *= 0x85ebca6bu;
-    h ^= h >> 13u;
-    h *= 0xc2b2ae35u;
-    h ^= h >> 16u;
-    
-    // ENSURE NON-ZERO RESULT (0 IS RESERVED FOR EMPTY)
-    return (h % (uHashTableSize - 1u)) + 1u;
-}
-
 // CONVERT 3D WORLD POSITION TO DISCRETE VOXEL COORDINATES
 ivec3 voxelCoords(vec3 position) {
     vec3 shifted = position - uVoxelOrigin;
-    return ivec3(floor(shifted / uVoxelSize + 1e-6));
+    return ivec3(floor(shifted / uVoxelSize + 0.5));
+}
+
+// FLATTEN THE 3D VOXEL COORDINATES TO A 1D INDEX FOR THE FLAG ARRAY
+uint voxelIndex(ivec3 voxelCoord) {
+    return voxelCoord.x + voxelCoord.y * uint(uVoxelBounds.x) + voxelCoord.z * uint(uVoxelBounds.x) * uint(uVoxelBounds.y);
 }
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
 
-    // INITIALIZE OUTPUT FLAG (REMOVE BY DEFAULT)
+    // KEEP BY DEFAULT
     outputFlags[index] = 1u;
-    
+
     // BOUNDARY CHECK
     uint inputCount = inputPoints.length();
     if (index >= inputCount) return;
 
     // GET POINT POSITION FOR THIS THREAD
     vec3 position = inputPoints[index];
-    
-    // GENERATE HASH KEY FOR THIS VOXEL
     ivec3 voxelCoord = voxelCoords(position);
-    uint voxelKey = hash3D(voxelCoord);
-
-    // FIND HASH TABLE SLOT USING LINEAR PROBING
-    uint hashIndex = voxelKey % uHashTableSize;
-    bool inserted = false;
-
-    // LINEAR PROBING - TRY UP TO 64 SLOTS
-    for (uint probe = 0u; probe < 64u && !inserted; probe++) {
-        uint existingKey = voxelHash[hashIndex];
-        
-        if (existingKey == 0u) {
-            // SLOT IS EMPTY - TRY TO CLAIM IT
-            uint previousKey = atomicCompSwap(voxelHash[hashIndex], 0u, voxelKey);
-            
-            if (previousKey == 0u) {
-                // SUCCESSFULLY CLAIMED - FLAG POINT TO KEEP (1)
-                outputFlags[index] = 1u;
-                inserted = true;
-            }
-            else {
-                // SOMEONE ELSE CLAIMED IT - CHECK IF SAME VOXEL
-                if (previousKey == voxelKey) {
-                    outputFlags[index] = 0u;  // SAME VOXEL, DUPLICATE
-                    inserted = true;
-                }
-                // ELSE: DIFFERENT VOXEL COLLISION - CONTINUE PROBING
-            }
-        } 
-        else if (existingKey == voxelKey) {
-            // SAME VOXEL ALREADY OCCUPIED - FLAG POINT TO REMOVE (0)
-            outputFlags[index] = 0u;
-            inserted = true;
-        }
-        
-        // MOVE TO NEXT SLOT IF NOT INSERTED
-        if (!inserted) {
-            hashIndex = (hashIndex + 1u) % uHashTableSize;
-        }
-    }
     
-    // NOTE: IF PROBING FAILS, POINT IS DISCARDED
-    // THIS SHOULD BE RARE WITH PROPER HASH TABLE SIZING
+    // CONVERT 3D VOXEL COORDINATES TO 1D INDEX
+    uint voxelKey = voxelIndex(voxelCoord);
+    
+    // ATOMIC FLAG - CHECK IF THIS VOXEL HAS BEEN PROCESSED
+    uint currentFlag = atomicExchange(outputFlags[voxelKey % uVoxelFlagSize], 1u);
+    if(currentFlag == 1u) {
+        // FLAG WAS ALREADY SET, DUPLICATE (REMOVE POINT)
+        outputFlags[index] = 0u;
+    } else {
+        // FLAG WAS NOT SET, NEW POINT (KEEP IT)
+        outputFlags[index] = 1u;
+    }
 }
