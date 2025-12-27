@@ -17,13 +17,11 @@
 using namespace Renderer;
 
 void CubeRenderer::Init(Data::ColorRampType rampType) {
+    colorLUT.Init(rampType);
     cubeShader = CreateShaderProgramFromFiles(
         "../assets/shaders/cube/cube.vert",
         "../assets/shaders/cube/cube.frag"
     );
-    
-    colorLUT.Init(rampType);
-    voxelDownsampler.Init();
 
     glUseProgram(cubeShader);
     uViewProjectionLocation = glGetUniformLocation(cubeShader, "uViewProjection");
@@ -79,13 +77,12 @@ void CubeRenderer::Shutdown() {
     if (instanceIntensityVBO) glDeleteBuffers(1, &instanceIntensityVBO);
     
     colorLUT.Shutdown();
-    voxelDownsampler.Shutdown();
     
     vao = vbo = ebo = instanceVBO = instanceIntensityVBO = cubeShader;
 }
 
 void CubeRenderer::Render(const glm::mat4& viewProjection, float globalScale) {
-    if (cubes.empty()) return;
+    if(cubes.empty()) return;
 
     glEnable(GL_DEPTH_TEST);
 
@@ -180,34 +177,31 @@ void CubeRenderer::UpdateColorRamp(Data::ColorRampType rampType) {
 void CubeRenderer::VoxelDownsample() {
     if (cubes.empty()) return;
     auto start = std::chrono::steady_clock::now();
-    
-    // EXECTUE VOXEL DOWNSAMPLING ON THE GPU (FOR PERFORMANCE GAINS)
-    const size_t inputCount = cubes.size();
-    
-    std::vector<Filters::GPUPointData> output;
-    voxelDownsampler.Downsample(output, cubes);
 
-    const size_t outputCount = output.size();
+    uint64_t inputCount = cubes.size();
+    
+    // FILTER USING GPU WITH GLOBAL SCALE
+    voxelDownsampler.ProcessPoints(cubes);
 
     // UPDATE INSTANCE BUFFERS
-    cubes.clear();
-    cubes.reserve(outputCount);
-    instanceModels.resize(outputCount);
-    instanceIntensities.resize(outputCount);
-
-    for (size_t i = 0; i < outputCount; ++i) {
-        cubes.emplace_back(output[i].position, static_cast<uint16_t>(output[i].intensity));
-        instanceModels[i] = glm::translate(glm::mat4(1.0f), output[i].position);
-        instanceIntensities[i] = output[i].intensity;
+    instanceModels.resize(cubes.size());
+    instanceIntensities.resize(cubes.size());
+    for (size_t i = 0; i < cubes.size(); ++i) {
+        instanceModels[i] = glm::translate(glm::mat4(1.0f), cubes[i].position);
+        instanceIntensities[i] = cubes[i].intensity;
     }
 
     auto end = std::chrono::steady_clock::now();
     double seconds = std::chrono::duration<double>(end - start).count();
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
         "GPU VOXEL DOWNSAMPLING: %zu -> %zu POINTS (%.1f%% REDUCTION) IN %.4f SECONDS",
-        inputCount, outputCount,
-        (1.0f - static_cast<float>(outputCount) / static_cast<float>(inputCount)) * 100.0f,
+        inputCount, cubes.size(),
+        (1.0f - static_cast<float>(cubes.size()) / static_cast<float>(inputCount)) * 100.0f,
         seconds);
+}
+
+void CubeRenderer::Deduplicate() {
+    
 }
 
 void CubeRenderer::Clear() {

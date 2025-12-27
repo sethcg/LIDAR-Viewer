@@ -40,16 +40,24 @@ class CubeRenderer {
         void NormalizeIntensities();
         void UpdateColorRamp(Data::ColorRampType rampType);
         
+        // GPU FILTERS
         void VoxelDownsample();
+        void Deduplicate();
 
         void Clear();
 
     private:
+        Utils::ColorLUT colorLUT;
+
         std::vector<CubeInstance> cubes;
 
         // INSTANCE BUFFERS
         std::vector<glm::mat4> instanceModels;
         std::vector<float> instanceIntensities;
+
+        // GPU UNIFORMS
+        GLint uViewProjectionLocation = -1;
+        GLint uGlobalScaleLocation = -1;
 
         // GPU RESOURCES
         GLuint cubeShader = 0;
@@ -58,14 +66,9 @@ class CubeRenderer {
         GLuint ebo = 0;
         GLuint instanceVBO = 0;
         GLuint instanceIntensityVBO = 0;
-
-        Utils::ColorLUT colorLUT;
         
+        // FILTERS
         Filters::VoxelDownsample voxelDownsampler;
-
-        // SHADER UNIFORMS
-        GLint uViewProjectionLocation = -1;
-        GLint uGlobalScaleLocation = -1;
 
         // CUBE VERTICES (CORNER POSITIONS)
         static constexpr float cubeVertices[24] = {

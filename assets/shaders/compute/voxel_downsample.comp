@@ -3,76 +3,74 @@
 // WORKGROUP SIZE (64 THREADS PER GROUP)
 layout(local_size_x = 64) in;
 
-// POINT DATA STRUCTURE (16-BYTE ALIGNED)
-struct PointData {
-    vec3 position;
-    float intensity;
+// UNIFORMS (PARAMETERS PASSED FROM CPU)
+uniform float uVoxelSize;           // SIZE OF EACH VOXEL CUBE
+uniform vec3 uVoxelOrigin;          // MINIMUM VOXEL TO USE AS OFFSET
+uniform uint uHashTableSize;        // SIZE OF HASH TABLE ARRAY
+
+// INPUT BUFFER (READ-ONLY POINT POSITION DATA)
+layout(std430, binding = 0) readonly buffer InputPointBuffer {
+    vec3 inputPoints[];
 };
 
-// INPUT BUFFER (READ-ONLY POINT CLOUD DATA)
-layout(std430, binding = 0) restrict readonly buffer InputPointBuffer {
-    PointData inputPoints[];
-};
-
-// OUTPUT BUFFER (WRITE-ONLY DOWNSAMPLED POINTS)
-layout(std430, binding = 1) restrict writeonly buffer OutputPointBuffer {
-    PointData outputPoints[];
-};
-
-// ATOMIC COUNTER (TRACKS NUMBER OF OUTPUT POINTS WRITTEN)
-layout(std430, binding = 2) restrict buffer OutputCounterBuffer {
-    uint outputCounter;
+// OUTPUT BUFFER (WRITE-ONLY KEEP/REMOVE FLAGS)
+layout(std430, binding = 1) writeonly buffer OutputFlagBuffer {
+    uint outputFlags[];  // 1 KEEP, 0 REMOVE
 };
 
 // HASH TABLE (STORES SIMPLE HASH KEYS OF VOXEL COORDINATES)
-// EACH ENTRY IS 1 UINT: HASH VALUE (0 = EMPTY, NON-ZERO = OCCUPIED)
-layout(std430, binding = 3) restrict buffer VoxelHashBuffer {
-    uint voxelHash[]; // SIMPLE HASH VALUES OF VOXEL COORDINATES
+layout(std430, binding = 2) restrict buffer VoxelHashBuffer {
+    uint voxelHash[];
 };
-
-// UNIFORMS (PARAMETERS PASSED FROM CPU)
-uniform float voxelSize;            // SIZE OF EACH VOXEL CUBE
-uniform uint maxOutputPoints;       // MAXIMUM ALLOWED OUTPUT POINTS
-uniform uint hashTableSize;         // SIZE OF HASH TABLE ARRAY
 
 // HASH FUNCTION FOR 3D VOXEL COORDINATES
 uint hash3D(ivec3 coord) {
-    // SIMPLE BUT EFFECTIVE HASH WITH LARGE PRIMES
+    // IMPROVED HASH WITH BETTER PRIME DISTRIBUTION AND MIXING
     const uint p1 = 73856093u;
     const uint p2 = 19349663u;  
     const uint p3 = 83492791u;
     
+    // BETTER MIXING TO REDUCE CLUSTERING
     uint h = uint(coord.x) * p1;
     h ^= uint(coord.y) * p2;
     h ^= uint(coord.z) * p3;
     
+    // ADDITIONAL MIXING ROUNDS FOR BETTER DISTRIBUTION
+    h ^= h >> 16u;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13u;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16u;
+    
     // ENSURE NON-ZERO RESULT (0 IS RESERVED FOR EMPTY)
-    return (h % (hashTableSize - 1u)) + 1u;
+    return (h % (uHashTableSize - 1u)) + 1u;
 }
 
 // CONVERT 3D WORLD POSITION TO DISCRETE VOXEL COORDINATES
-// ADDS SMALL EPSILON TO AVOID FLOATING POINT BOUNDARY ISSUES
-ivec3 voxelCoords(vec3 pos) {
-    return ivec3(floor(pos / voxelSize + 1e-6));
+ivec3 voxelCoords(vec3 position) {
+    vec3 shifted = position - uVoxelOrigin;
+    return ivec3(floor(shifted / uVoxelSize + 1e-6));
 }
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
+
+    // INITIALIZE OUTPUT FLAG (REMOVE BY DEFAULT)
+    outputFlags[index] = 1u;
     
     // BOUNDARY CHECK
-    if (index >= inputPoints.length()) return;
+    uint inputCount = inputPoints.length();
+    if (index >= inputCount) return;
 
-    // GET POINT DATA FOR THIS THREAD
-    PointData point = inputPoints[index];
-    
-    // CALCULATE WHICH VOXEL THIS POINT BELONGS TO
-    ivec3 voxelCoord = voxelCoords(point.position);
+    // GET POINT POSITION FOR THIS THREAD
+    vec3 position = inputPoints[index];
     
     // GENERATE HASH KEY FOR THIS VOXEL
+    ivec3 voxelCoord = voxelCoords(position);
     uint voxelKey = hash3D(voxelCoord);
 
     // FIND HASH TABLE SLOT USING LINEAR PROBING
-    uint hashIndex = voxelKey % hashTableSize;
+    uint hashIndex = voxelKey % uHashTableSize;
     bool inserted = false;
 
     // LINEAR PROBING - TRY UP TO 64 SLOTS
@@ -81,31 +79,31 @@ void main() {
         
         if (existingKey == 0u) {
             // SLOT IS EMPTY - TRY TO CLAIM IT
-            uint claimedKey = atomicCompSwap(voxelHash[hashIndex], 0u, voxelKey);
+            uint previousKey = atomicCompSwap(voxelHash[hashIndex], 0u, voxelKey);
             
-            if (claimedKey == 0u) {
-                // SUCCESSFULLY CLAIMED - ADD POINT TO OUTPUT
-                uint outIdx = atomicAdd(outputCounter, 1u);
-                if (outIdx < maxOutputPoints) {
-                    outputPoints[outIdx] = point;
+            if (previousKey == 0u) {
+                // SUCCESSFULLY CLAIMED - FLAG POINT TO KEEP (1)
+                outputFlags[index] = 1u;
+                inserted = true;
+            }
+            else {
+                // SOMEONE ELSE CLAIMED IT - CHECK IF SAME VOXEL
+                if (previousKey == voxelKey) {
+                    outputFlags[index] = 0u;  // SAME VOXEL, DUPLICATE
+                    inserted = true;
                 }
-                inserted = true;
+                // ELSE: DIFFERENT VOXEL COLLISION - CONTINUE PROBING
             }
-            // ELSE: SOMEONE ELSE CLAIMED IT, CHECK WHAT THEY PUT
-            else if (claimedKey == voxelKey) {
-                // SAME VOXEL - DISCARD THIS POINT
-                inserted = true;
-            }
-            // ELSE: DIFFERENT VOXEL - CONTINUE PROBING
         } 
         else if (existingKey == voxelKey) {
-            // SAME VOXEL ALREADY OCCUPIED - DISCARD THIS POINT
+            // SAME VOXEL ALREADY OCCUPIED - FLAG POINT TO REMOVE (0)
+            outputFlags[index] = 0u;
             inserted = true;
         }
         
         // MOVE TO NEXT SLOT IF NOT INSERTED
         if (!inserted) {
-            hashIndex = (hashIndex + 1u) % hashTableSize;
+            hashIndex = (hashIndex + 1u) % uHashTableSize;
         }
     }
     
