@@ -5,9 +5,9 @@ layout(local_size_x = 64) in;
 
 // UNIFORMS (PARAMETERS PASSED FROM CPU)
 uniform float uVoxelSize;           // SIZE OF EACH VOXEL CUBE
+uniform uint uVoxelCount;           // SIZE OF THE ATOMIC OUTPUT FLAG ARRAY
 uniform vec3 uVoxelOrigin;          // MINIMUM VOXEL TO USE AS OFFSET
 uniform vec3 uVoxelBounds;          // NUMBER OF VOXELS ALONG X, Y, Z
-uniform uint uVoxelFlagSize;        // SIZE OF THE ATOMIC OUTPUT FLAG ARRAY
 
 // INPUT BUFFER (READ-ONLY POINT POSITION DATA)
 layout(std430, binding = 0) readonly buffer InputPointBuffer {
@@ -48,7 +48,7 @@ void main() {
     uint voxelKey = voxelIndex(voxelCoord);
     
     // ATOMIC FLAG - CHECK IF THIS VOXEL HAS BEEN PROCESSED
-    uint currentFlag = atomicExchange(outputFlags[voxelKey % uVoxelFlagSize], 1u);
+    uint currentFlag = atomicExchange(outputFlags[voxelKey % uVoxelCount], 1u);
     if(currentFlag == 1u) {
         // FLAG WAS ALREADY SET, DUPLICATE (REMOVE POINT)
         outputFlags[index] = 0u;

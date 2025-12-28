@@ -12,7 +12,7 @@
 #include <CubeInstance.hpp>
 #include <CubeRenderer.hpp>
 #include <RendererHelper.hpp>
-#include <VoxelDownsample.hpp>
+#include <VoxelDownsampleFilter.hpp>
 
 using namespace Renderer;
 
@@ -181,7 +181,7 @@ void CubeRenderer::VoxelDownsample() {
     uint64_t inputCount = cubes.size();
 
     // EXECUTE VOXEL DOWNSAMPLING FILTER
-    std::vector<CubeInstance> filteredCubes = voxelDownsampler.ProcessPoints(cubes);
+    std::vector<CubeInstance> filteredCubes = voxelDownsampleFilter.ProcessPoints(cubes);
     if (filteredCubes.empty()) return;
 
     UpdateBufferSize(filteredCubes.size());

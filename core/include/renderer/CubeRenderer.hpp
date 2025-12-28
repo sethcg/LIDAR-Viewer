@@ -13,7 +13,7 @@
 #include <ColorRamp.hpp>
 #include <CubeInstance.hpp>
 #include <RendererHelper.hpp>
-#include <VoxelDownsample.hpp>
+#include <VoxelDownsampleFilter.hpp>
 
 // FORWARD DECLARATION
 class Camera;
@@ -67,7 +67,7 @@ class CubeRenderer {
         GLuint instanceIntensityVBO = 0;
         
         // FILTERS
-        Filters::VoxelDownsample voxelDownsampler;
+        Filters::VoxelDownsampleFilter voxelDownsampleFilter;
 
         // CUBE VERTICES (CORNER POSITIONS)
         static constexpr float cubeVertices[24] = {

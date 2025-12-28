@@ -16,10 +16,10 @@
 
 namespace Filters {
 
-    class VoxelDownsample {
+    class VoxelDownsampleFilter {
         public:
-            VoxelDownsample();
-            ~VoxelDownsample();
+            VoxelDownsampleFilter();
+            ~VoxelDownsampleFilter();
 
             std::vector<CubeInstance> ProcessPoints(std::vector<CubeInstance>& cubes);
 
@@ -29,7 +29,7 @@ namespace Filters {
 
         private:
             float voxelSize = 0.0f;
-            uint32_t voxelFlagSize = 0;
+            uint32_t voxelCount = 0;
             glm::vec3 voxelOrigin = glm::vec3(0.0f);
             glm::vec3 voxelBounds = glm::vec3(0.0f);
 
@@ -37,9 +37,9 @@ namespace Filters {
 
             // GPU UNIFORMS
             GLint uVoxelSize = -1;
+            GLint uVoxelCount = -1;
             GLint uVoxelOrigin = -1;
             GLint uVoxelBounds = -1;
-            GLint uVoxelFlagSize = -1;
 
             // GPU RESOURCES
             GLuint computeProgram = 0;
@@ -48,8 +48,8 @@ namespace Filters {
 
         private:
             // NON-COPYABLE (OWNS GPU RESOURCES)
-            VoxelDownsample(const VoxelDownsample&) = delete;
-            VoxelDownsample& operator = (const VoxelDownsample&) = delete;
+            VoxelDownsampleFilter(const VoxelDownsampleFilter&) = delete;
+            VoxelDownsampleFilter& operator = (const VoxelDownsampleFilter&) = delete;
     };
 
 }

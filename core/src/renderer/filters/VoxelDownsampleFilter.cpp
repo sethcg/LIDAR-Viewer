@@ -12,27 +12,27 @@
 
 #include <CubeInstance.hpp>
 #include <RendererHelper.hpp>
-#include <VoxelDownsample.hpp>
+#include <VoxelDownsampleFilter.hpp>
 
 namespace Filters {
 
     // CONSTRUCTOR
-    VoxelDownsample::VoxelDownsample() {
-        computeProgram = Renderer::CreateComputeShaderProgram("../assets/shaders/compute/voxel_downsample.comp");
+    VoxelDownsampleFilter::VoxelDownsampleFilter() {
+        computeProgram = Renderer::CreateComputeShaderProgram("../assets/shaders/compute/voxel_downsample_filter.comp");
 
         glGenBuffers(1, &inputPointSSBO);
         glGenBuffers(1, &outputFlagSSBO);
-        
+
         glUseProgram(computeProgram);
 
         uVoxelSize = glGetUniformLocation(computeProgram, "uVoxelSize");
+        uVoxelCount = glGetUniformLocation(computeProgram, "uVoxelCount");
         uVoxelOrigin = glGetUniformLocation(computeProgram, "uVoxelOrigin");
         uVoxelBounds = glGetUniformLocation(computeProgram, "uVoxelBounds");
-        uVoxelFlagSize = glGetUniformLocation(computeProgram, "uVoxelFlagSize");
     }
 
     // DECONSTRUCTOR
-    VoxelDownsample::~VoxelDownsample() {
+    VoxelDownsampleFilter::~VoxelDownsampleFilter() {
         if (computeProgram) glDeleteProgram(computeProgram);
         if (inputPointSSBO) glDeleteBuffers(1, &inputPointSSBO);
         if (outputFlagSSBO) glDeleteBuffers(1, &outputFlagSSBO);
@@ -40,7 +40,7 @@ namespace Filters {
         computeProgram = inputPointSSBO = outputFlagSSBO = 0;
     }
 
-    void VoxelDownsample::CalculateVoxelSize() {
+    void VoxelDownsampleFilter::CalculateVoxelSize() {
         if (pointData.empty()) return;
 
         glm::vec3 minPoint = pointData[0];
@@ -70,31 +70,25 @@ namespace Filters {
         int numVoxelsY = static_cast<int>(std::ceil(extent.y / voxelSize));
         int numVoxelsZ = static_cast<int>(std::ceil(extent.z / voxelSize));
         voxelBounds = glm::vec3(numVoxelsX, numVoxelsY, numVoxelsZ);
-        voxelFlagSize = numVoxelsX * numVoxelsY * numVoxelsZ;
+        voxelCount = numVoxelsX * numVoxelsY * numVoxelsZ;
     }
 
-    void VoxelDownsample::UpdateBufferSize() {
+    void VoxelDownsampleFilter::UpdateBufferSize() {
         // INPUT BUFFER (POINT POSITIONS)
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, inputPointSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, pointData.size() * sizeof(glm::vec3), pointData.data(), GL_DYNAMIC_DRAW);
 
         // OUTPUT BUFFER (KEEP/REMOVE FLAGS)
-        std::vector<GLuint> outputFlags(voxelFlagSize, 0);
+        std::vector<GLuint> outputFlags(voxelCount, 0);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, outputFlagSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, voxelFlagSize * sizeof(GLuint), outputFlags.data(), GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, voxelCount * sizeof(GLuint), outputFlags.data(), GL_DYNAMIC_DRAW);
 
         glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     }
 
-    std::vector<CubeInstance> VoxelDownsample::ProcessPoints(std::vector<CubeInstance>& cubes) {
+    std::vector<CubeInstance> VoxelDownsampleFilter::ProcessPoints(std::vector<CubeInstance>& cubes) {
         if (cubes.empty()) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
-                "NO POINTS TO PROCESS IN VOXEL DOWNSAMPLING");
-            return {};
-        }
-        if (cubes.size() > UINT32_MAX) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
-                "DATASET TOO LARGE: %zu POINTS EXCEED UINT32 LIMIT", cubes.size());
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "NO POINTS TO PROCESS IN VOXEL DOWNSAMPLING");
             return {};
         }
 
@@ -107,7 +101,7 @@ namespace Filters {
 
         CalculateVoxelSize();
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, 
-            "VOXEL SIZE: %.3f, VOXEL COUNT: %zu, POINT COUNT: %zu", voxelSize, voxelFlagSize, pointData.size());
+            "VOXEL SIZE: %.3f, VOXEL COUNT: %zu, POINT COUNT: %zu", voxelSize, voxelCount, pointData.size());
 
         UpdateBufferSize();
 
@@ -117,7 +111,7 @@ namespace Filters {
         glUniform1f(uVoxelSize, voxelSize);
         glUniform3fv(uVoxelOrigin, 1, glm::value_ptr(voxelOrigin));
         glUniform3fv(uVoxelBounds, 1, glm::value_ptr(voxelBounds));
-        glUniform1ui(uVoxelFlagSize, static_cast<GLuint>(voxelFlagSize));
+        glUniform1ui(uVoxelCount, static_cast<GLuint>(voxelCount));
 
         // BIND BUFFERS
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, inputPointSSBO);
@@ -133,19 +127,18 @@ namespace Filters {
         GLuint* outputFlags = static_cast<GLuint*>(
             glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, pointData.size() * sizeof(GLuint), GL_MAP_READ_BIT)
         );
-
-        // REMOVE POINTS BASED ON OUTPUT FLAGS
-        std::vector<CubeInstance> filteredCubes;
-        filteredCubes.reserve(cubes.size());
+        
+        std::vector<CubeInstance> result;
+        result.reserve(cubes.size());
         for (GLuint index = 0; index < cubes.size(); ++index) {
             // KEEP POINT IF FLAGGED
             if (outputFlags[index] > 0) {
-                filteredCubes.push_back(cubes[index]);
+                result.push_back(cubes[index]);
             }
         }
 
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-        return filteredCubes;
+        return result;
     }
 
 }
