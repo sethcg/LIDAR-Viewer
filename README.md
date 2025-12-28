@@ -1,10 +1,61 @@
 # Lidar Viewer
 
-### Description:
+<h2>Overview:</h2>
 
-This is a C++ application that can visualize local LAS/LAZ file point-cloud data into 3D space as cubes. Then the user can view the mapped points with either an orbital or free camera. The color ramp, scale, and other various settings can be adjusted to preference.
+<dl>
+  <dd>
+    <h4>Description:</h4>
+    <dl>
+      <dd>
+        This is a C++ application that can visualize local LAS/LAZ file point-cloud data into 3D space as cubes, colored by a normalized intensity value. The user can view the cubes using either a free/orbital camera. Color ramp, scale, and other settings can be adjusted to preference.
+      </dd>
+    </dl>
+  </dd>
+</dl>
 
----
+<dl>
+  <dd>
+    <h4>Build Process:</h4>
+    <dl>
+      <dd>
+        To build the program the application is using a combination of CMake and Vcpkg. There is the option to build for Release or Debug, and some optimizations added that significantly increase the performance of reading/filtering point-cloud data.
+      </dd>
+    </dl>
+    <dl>
+      <dd>
+        Also, there is a ./plugin folder containing two obsolete PDAL plugins. These are no longer used because of performance issues.
+      </dd>
+    </dl>
+  </dd>
+</dl>
+
+### Preview:
+
+
+<dl>
+  <dd>
+  <details open>
+    <summary>Orbital Camera</summary>
+    <img width="598px" height="600px" src="https://github.com/user-attachments/assets/54806615-9735-4899-a913-e8d513abb833" alt="image">
+    <br>
+  </details>
+  
+  <details closed>
+    <summary>Free Camera</summary>
+    <img width="598px" height="600px" src="https://github.com/user-attachments/assets/33c847c6-e960-425f-b1d1-0302a17b5cef" alt="image">
+    <br>
+  </details>
+  </dd>
+</dl>
+
+### Tooling:
+
+  - [x] Point Data Abstraction Library <a href="https://github.com/PDAL/PDAL">(PDAL)</a>
+  - [x] SDL3
+  - [x] OpenGL
+  - [x] ImGui
+  - [x] Vcpkg
+  - [x] CMake
 
 ### Developer Notes:
 
@@ -35,12 +86,12 @@ cloc --include-lang=C++,"C/C++ Header",CMake --exclude-dir=build,vcpkg --out=lin
 
 ```
 
-| Language         | Files  | Blank | Comment | Code |
-|:-----------------|:------:|:-----:|:-------:|:-----:|
-| **C++**          | 11     | 276   | 69      | 961   |
-| **C/C++ Header** | 14     | 222   | 58      | 791   |
-| **CMake**        | 9      | 53    | 38      | 195   |
-|                                                     |
-| **Total**        | 34     | 551   | 165     | 1947  |
+| Language         | Files  | Blank | Comment | Code   |
+|:-----------------|:------:|:-----:|:-------:|:------:|
+| **C++**          | 13     | 326   | 82      | 1113   |
+| **C/C++ Header** | 17     | 250   | 63      | 857    |
+| **CMake**        | 9      | 53    | 38      | 195    |
+|                                                      |
+| **Total**        | 39     | 629   | 183     | 2165   |
 
 </details>
