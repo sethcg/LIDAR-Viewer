@@ -36,13 +36,13 @@
   <dd>
   <details open>
     <summary>Orbital Camera</summary>
-    <img width="598px" height="600px" src="https://github.com/user-attachments/assets/54806615-9735-4899-a913-e8d513abb833" alt="image">
+    <img width="800px" height="507px" src="https://github.com/sethcg/LIDAR-Viewer/blob/e547f3449c91423b641a48f5382c2babe3acff2d/_demo/laz-viewer-orbital_camera.gif" alt="image">
     <br>
   </details>
   
   <details closed>
     <summary>Free Camera</summary>
-    <img width="598px" height="600px" src="https://github.com/user-attachments/assets/33c847c6-e960-425f-b1d1-0302a17b5cef" alt="image">
+    <img width="800px" height="509px" src="https://github.com/sethcg/LIDAR-Viewer/blob/e547f3449c91423b641a48f5382c2babe3acff2d/_demo/laz-viewer-free_camera.gif" alt="image">
     <br>
   </details>
   </dd>
